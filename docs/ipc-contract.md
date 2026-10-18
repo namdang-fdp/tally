@@ -67,9 +67,10 @@ nhưng vẫn hợp lệ theo code points. Không log title hoặc nội dung bac
 | --- | --- |
 | `ContextDto` | `revision`, `today: Day`, `reportingTimezone: Timezone`, `timezoneFallback: boolean`, `undo: UndoDto \| null` |
 | `UndoDto` | `token: Id`, `action: "create" \| "edit" \| "move" \| "complete" \| "reopen" \| "delete"` |
+| `TaskTarget` | Union `{kind:"today"}`, `{kind:"day", day:Day}` hoặc `{kind:"later"}`; input intent cho create/move, không phải ngày đã resolve |
 | `TaskDto` | `id: Id`, `title: string`, `plannedDay: Day \| null`, `completed: boolean`, `createdAt: UtcInstant`, `updatedAt: UtcInstant` |
 | `HistoryItemDto` | `completionId: Id`, `taskId: Id`, `titleSnapshot: string`, `plannedDaySnapshot: Day \| null`, `completedAt: UtcInstant`, `completedDay: Day`, `completionTimezone: Timezone`, `taskDeleted: boolean` |
-| `PageRequest` | `offset: integer >= 0`, `limit: integer 1..200` (UI mặc định 100), `revision: Revision \| null` |
+| `PageRequest` | `offset: integer >= 0`, `limit: integer 1..200` (UI mặc định 100), `revision: Revision \| null`; revision null bắt buộc offset 0 |
 | `PageDto<T>` | `items: T[]`, `total: integer >= 0`, `nextOffset: integer \| null` |
 | `MutationGuard` | `expectedRevision: Revision` |
 | `TaskMutationDto` | `context: ContextDto`, `taskId: Id`, `changed: boolean` |
@@ -89,9 +90,9 @@ Read trả snapshot nhất quán trong một lần gọi; mutation resolve sau c
 | --- | --- | --- |
 | `get_context` | `{}` | `ContextDto`; startup, mở lại bảng, clock/day đổi |
 | `list_tasks` | `{view: TaskView, page}` | `{context, page: PageDto<TaskDto>, pendingCount: integer}`; count mọi Pending chưa xóa/chưa xong, không chỉ page |
-| `create_task` | `{id: Id, title, plannedDay: Day \| null, completed: boolean, guard}` | `TaskMutationDto`; UI cấp task ID một lần cho một intent; Rust cấp completion ID nếu completed |
+| `create_task` | `{id: Id, title, target: TaskTarget, completed: boolean, guard}` | `TaskMutationDto`; UI cấp task ID một lần cho một intent; Rust cấp completion ID nếu completed |
 | `edit_task` | `{taskId, title, guard}` | `TaskMutationDto`; chỉ sửa title hiện tại |
-| `move_task` | `{taskId, plannedDay: Day \| null, guard}` | `TaskMutationDto`; Today phải được resolve từ context Rust mới nhất |
+| `move_task` | `{taskId, target: TaskTarget, guard}` | `TaskMutationDto`; Rust resolve Today tại mutation boundary |
 | `complete_task` | `{taskId, guard}` | `TaskMutationDto`; tạo tối đa một completion có hiệu lực |
 | `reopen_task` | `{taskId, guard}` | `TaskMutationDto`; cả từ Tasks và history; task đã xóa được khôi phục |
 | `delete_task` | `{taskId, guard}` | `TaskMutationDto`; bỏ khỏi Tasks, không thu hồi completion |
@@ -111,10 +112,22 @@ xóa; không sửa task. Sắp thứ tự day/Later theo `(createdAt,id)` tăng 
 theo `(plannedDay,createdAt,id)` tăng dần để UI nhóm ngày. History theo
 `(completedAt,completionId)` giảm dần. Chưa có reorder thủ công.
 
-`page.revision: null` lấy page đầu ở revision hiện tại; page tiếp dùng revision
-đã nhận. Có thay đổi giữa các page: `REVISION_CONFLICT`, UI tải lại từ đầu, không
-trộn snapshot. `offset > total` trả rỗng; cuối danh sách `nextOffset: null`.
+`page.revision: null` bắt buộc `offset:0`, lấy page đầu ở revision hiện tại;
+offset khác 0 bị `VALIDATION_ERROR`, field `page.offset`, không tự clamp hoặc
+đọc page giữa mà không có revision. Page tiếp dùng revision đã nhận; có thể tải
+lại offset 0 với revision cụ thể. Có thay đổi giữa các page:
+`REVISION_CONFLICT`, UI tải lại từ đầu, không trộn snapshot. `offset > total`
+trả rỗng; cuối danh sách `nextOffset: null`.
 Không tạo cursor store hoặc cache dataset riêng.
+
+Create/move từ view Today gửi `target:{kind:"today"}`, từ ngày cụ thể gửi
+`{kind:"day",day:...}` (kể cả ngày đang trùng Today), từ Later gửi `{kind:"later"}`.
+Rust serialize writer, kiểm guard rồi lấy một clock instant cho mutation được
+chấp nhận: resolve today theo reporting timezone tại instant đó; day giữ nguyên
+ngày explicit, later resolve null. Cùng instant dùng cho timestamps, completion
+nếu tạo đã xong và `context.today` trong response. Request chờ qua nửa đêm dùng
+ngày tại lúc được thực thi, không phải lúc UI gửi/get_context. DTO output vẫn
+`plannedDay:Day|null`; không lưu intent Today để tự chuyển ngày về sau.
 
 Stats dùng khoảng inclusive, `fromDay <= toDay`, tối đa 366 ngày/request; `days`
 đủ từng ngày, kể cả zero, tăng dần; `total = sum(days.count)`. Đề xuất mặc định
@@ -220,7 +233,10 @@ thay Undo; không tạo trạng thái task/history lệch nhau.
 5. Rust dùng clock có thể inject. UI hỏi context khi mở/focus và tại thời điểm
    dự kiến qua nửa đêm; timer chỉ kích hoạt query, không tự tính reporting day.
    Today đổi ngày thì tải view Today/Pending/Stats; ngày cụ thể đang chọn giữ
-   nguyên. Input draft giữ text; Today submit dùng context mới, không rollover task.
+   nguyên. Input draft giữ text; Today submit gửi intent `today` để Rust resolve
+   tại mutation boundary, không phụ thuộc context/timer UI còn mới. Clock đổi
+   ngày không tự tăng revision; guard bảo vệ thay đổi dữ liệu, không đại diện ngày.
+   Task đã lưu không rollover.
 
 Rust lấy timezone IANA lần đầu, persist; fallback UTC có cờ để settings hiển thị
 thông báo. Đổi OS timezone không sửa reporting timezone. Complete tính
@@ -312,7 +328,7 @@ Create-completed ở ngày cũ (revision ban đầu `7`):
   "request": {
     "id": "11111111-1111-4111-8111-111111111111",
     "title": "  Đọc sách 📚  ",
-    "plannedDay": "2026-10-16",
+    "target": { "kind": "day", "day": "2026-10-16" },
     "completed": true,
     "expectedRevision": "7"
   }
@@ -364,7 +380,8 @@ Giả định profile trước đó rỗng completion: Stats 16–18/10 có coun
 total 1; Pending count 0. Delete với guard `8` → revision `9`, Tasks rỗng,
 history item đổi `taskDeleted:true`, Stats vẫn 1. Reopen guard `9` → revision `10`,
 Tasks có task chưa xong tại 16/10, history rỗng/Stats 0, Pending count 1.
-Move Later guard `10` → revision `11`, `plannedDay:null`, Pending count 0.
+Move với `target:{kind:"later"}` guard `10` → revision `11`, output
+`plannedDay:null`, Pending count 0.
 Undo move guard `11` bằng token hiện tại → revision `12`, planned day 16/10,
 Pending count 1, Undo null. Retry create nguyên body guard `7` luôn conflict:
 
@@ -376,6 +393,19 @@ Pending count 1, Undo null. Retry create nguyên body guard `7` luôn conflict:
   "retryable": false
 }
 ```
+
+Ví dụ thời gian độc lập, cùng timezone trên: `get_context` tại
+`2026-10-18T16:59:59.900Z` trả Today `2026-10-18`, revision `20`. Không có dữ liệu
+đổi, mutation được thực thi tại `2026-10-18T17:00:00.100Z` với guard `20` vẫn hợp
+lệ. Create hoặc move `target:{kind:"today"}` phải trả plannedDay `2026-10-19`,
+context Today `2026-10-19`; nếu create-completed, completedDay cũng là 19/10.
+Với cùng điều kiện ở profile test riêng, `target:{kind:"day",day:"2026-10-18"}`
+giữ plannedDay 18/10, còn `target:{kind:"later"}` cho null; completion vẫn ngày
+19/10. Task cũ ngày 18 chưa xong giữ nguyên và xuất hiện trong Pending.
+
+Fixture phân trang: `{offset:100,limit:100,revision:null}` bị validation ở
+`page.offset`; `{offset:0,limit:100,revision:null}` lấy revision hiện tại, page
+kế tiếp phải gửi revision đó. Đây là ví dụ dự kiến, chưa chạy provider/test.
 
 TAL-4 sau duyệt cần fixture Rust/TS dùng chung bao phủ các shape request/response,
 null Later, history taskDeleted, zero day, error, cancelled và preview ready;
@@ -457,7 +487,8 @@ Strategy sau khi được duyệt, không phải plan triển khai trong lượt
 | --- | --- |
 | TAL-4 Rust serialization | Round trip mọi DTO/union/error/fixture; camelCase, explicit null, UTC/day, Unicode 1/500/501; test request sai/field lạ tại boundary khi có adapter |
 | TAL-4 TS/Vitest | Fixture typecheck bằng `pnpm check`, parity với JSON Rust, adapter unavailable không giả success; request/error shape thống nhất |
-| Provider Rust unit/integration | Fixed clock/timezone/DST, lifecycle invariant, atomic create-completed/reopen/Undo, retry mất response/double complete, restart revision, failure rollback; DB TempDir |
+| Provider Rust unit/integration | Fixed clock/timezone/DST; context trước nửa đêm, create/move thực thi sau nửa đêm với guard không đổi: today resolve ngày mới, explicit day/Later giữ nguyên, completion dùng cùng instant; task cũ không rollover. Lifecycle invariant, atomic create-completed/reopen/Undo, retry mất response/double complete, restart revision, failure rollback; DB TempDir |
+| Provider query boundary | Revision null chỉ nhận offset 0; null + offset > 0 validation, page tiếp dùng revision cụ thể, thay dữ liệu giữa page conflict; không trộn snapshot |
 | Data provider | Round trip task/deleted/revoked/settings/Stats; invalid version/ID/reference/limit/truncated; file đổi sau preview, stale/expired token, backup/commit/rename lỗi không thay dataset |
 | UI Vitest/Testing Library | Loading/empty/stale/error, draft/IME handler, invalidate/refresh/generation, không optimistic success hoặc tự replay mutation; Undo không chiếm text Ctrl+Z |
 | App thật | Tauri file dialog/focus/shortcut/IME/restore/restart trên Hyprland, provider integration và release budget mục 7; browser/fixture không chứng minh các AC desktop |
