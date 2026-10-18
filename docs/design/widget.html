@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Tally · Widget review / TAL-2</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="widget.css">
+</head>
+<body>
+  <div class="review-layout">
+    <aside class="review-panel" aria-label="Công cụ review mockup">
+      <div class="review-intro"><h1>Tally</h1><span class="eyebrow">Appearance study · 02</span></div>
+      <label class="review-control">Kịch bản<select id="scenario">
+        <option value="today">01 · Today</option><option value="later">02 · Later</option>
+        <option value="pending">03 · Pending</option><option value="past">04 · Ngày cũ</option>
+        <option value="completed">05 · Thêm đã xong</option><option value="empty">06 · Trống</option>
+        <option value="loading">07 · Đang tải</option><option value="read-error">08 · Lỗi tải</option>
+        <option value="write-error">09 · Lỗi ghi</option><option value="long">10 · Nội dung dài</option>
+        <option value="stats">11 · Stats</option><option value="detail">12 · Chi tiết ngày</option>
+        <option value="zero">13 · Ngày không có việc</option><option value="settings">14 · Settings</option>
+        <option value="backup">15 · Restore preview</option><option value="invalid">16 · File không hợp lệ</option>
+        <option value="backup-error">17 · Backup thất bại</option>
+      </select></label>
+      <label class="review-control">Giao diện<select id="review-theme"><option value="system">Theo hệ thống</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label class="review-control">Chất liệu<select id="review-material"><option value="glass">Kính mờ</option><option value="solid">Nền đặc</option></select></label>
+      <button id="reopen-widget" type="button">Mở lại bảng</button>
+      <details class="review-note meta"><summary>Về bản mẫu</summary><div class="review-note-content"><p><strong>Mockup — dữ liệu giả</strong></p><p>18.10.2026 · Asia/Ho_Chi_Minh</p><p>Thao tác chỉ đổi fixture trong bộ nhớ. Reload để bắt đầu lại. File, Quit, autostart và mở/ẩn OS đều là mô phỏng.</p><p>macOS materials · Notion simplicity · Things spacing. Visual v02 đã được người dùng chấp thuận; policy MVP vẫn chờ TAL-3.</p></div></details>
+    </aside>
+    <main class="stage">
+      <div class="stage-caption"><span class="eyebrow">Không gian của bạn</span><span class="meta">Widget · 480 px</span></div>
+      <section class="widget" id="widget" aria-label="Tally widget">
+        <header class="widget-header">
+          <span class="wordmark"><span class="tally-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 4v12M9 4v12M13 4v12M3 13l13-6"/></svg></span>tally</span>
+          <div class="tabs" role="tablist" aria-label="Nội dung">
+            <button id="tasks-tab" type="button" role="tab" aria-controls="tasks-panel" aria-selected="true">Tasks</button>
+            <button id="stats-tab" type="button" role="tab" aria-controls="stats-panel" aria-selected="false" tabindex="-1">Stats</button>
+          </div>
+          <button id="settings-button" class="quiet" type="button" aria-label="Mở Settings" title="Settings"><svg class="icon" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m8 2-.5 2-1.8 1-2-.5-2 3.5L3 9.5v2l-1.3 1.5 2 3.5 2-.5 1.8 1 .5 2h4l.5-2 1.8-1 2 .5 2-3.5-1.3-1.5v-2L18.3 8l-2-3.5-2 .5-1.8-1L12 2Z" transform="translate(1 0) scale(.9)"/><circle cx="10" cy="10" r="2.5"/></svg></button>
+        </header>
+        <section id="tasks-panel" class="panel" role="tabpanel" aria-labelledby="tasks-tab">
+          <div class="view-header"><h2 id="view-title">Today</h2><span class="meta" id="view-date">Chủ nhật, 18 tháng 10</span></div>
+          <nav class="view-nav" aria-label="Ngày dự định">
+            <button type="button" data-view="today" aria-pressed="true">Today</button>
+            <button type="button" data-view="later" aria-pressed="false">Later <span id="later-count" class="badge">0</span></button>
+            <button type="button" data-view="pending" aria-pressed="false">Pending <span id="pending-count" class="badge">0</span></button>
+            <input id="planned-date" type="date" value="2026-10-18" aria-label="Chọn ngày dự định">
+          </nav>
+          <form class="composer" id="composer" novalidate>
+            <label class="sr-only" for="task-title">Nội dung việc mới</label>
+            <input id="task-title" type="text" placeholder="Bạn muốn làm gì hôm nay?" autocomplete="off" aria-describedby="input-error">
+            <div class="composer-bottom"><label class="check-label"><input id="add-completed" type="checkbox">Việc đã xong</label><button type="submit" class="primary">Thêm <span aria-hidden="true">↵</span></button></div>
+            <p id="completion-hint" class="meta" hidden>Ghi nhận hoàn thành hôm nay, 18/10; không phải ngày dự định.</p>
+            <p id="input-error" class="form-error" role="alert"></p>
+            <button id="retry-write" type="button" hidden>Thử lưu lại</button>
+          </form>
+          <div id="task-content" class="task-scroll"></div>
+        </section>
+        <section id="stats-panel" class="panel" role="tabpanel" aria-labelledby="stats-tab" hidden></section>
+        <section id="settings-panel" class="panel" aria-labelledby="settings-title" hidden><h2 id="settings-title" tabindex="-1">Settings</h2></section>
+        <footer class="widget-footer"><span id="notice" class="meta" role="status" aria-live="polite">Mỗi việc, một chút tiến lên.</span><button type="button" id="undo" class="quiet" disabled>Undo</button></footer>
+      </section>
+      <p class="review-hint meta"><kbd>↵</kbd> thêm việc &nbsp; · &nbsp; <kbd>↑ ↓</kbd> chọn việc &nbsp; · &nbsp; <kbd>esc</kbd> cất bảng</p>
+    </main>
+  </div>
+  <dialog id="action-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-header"><h2 id="dialog-title"></h2><button id="close-dialog" type="button" class="quiet" aria-label="Đóng hộp thoại">✕</button></div>
+    <div id="dialog-body"></div>
+  </dialog>
+  <script>
+    'use strict';
+    const today = '2026-10-18';
+    const reportZone = 'Asia/Ho_Chi_Minh';
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => [...document.querySelectorAll(selector)];
+    const dateLabel = (day) => day.split('-').reverse().join('/');
+    // All user-like content is set with textContent, never HTML interpolation.
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+    function actionIcon(name) {
+      const paths = { edit: 'm3 13 1 4 4-1L17 7l-5-5Z M10 4l5 5', move: 'M4 15 15 4 M5 4h10v10', delete: 'M5 5l10 10 M15 5 5 15' };
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 20 20'); svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '1.4');
+      svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', paths[name]); svg.append(path); return svg;
+    }
+    function button(text, handler, className = 'quiet') {
+      const node = element('button', className, text);
+      node.type = 'button'; node.addEventListener('click', handler); return node;
+    }
+    let tasks = [], completions = [], undoState = null, serial = 0;
+    let view = 'today', selectedDay = today, state = 'ready', activePanel = 'tasks';
+    let composing = false, dialogTrigger = null, selectedHeatDay = today, theme = 'system';
+    const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+    function setTheme(value) {
+      theme = value;
+      document.documentElement.dataset.theme = value === 'system' ? (systemTheme.matches ? 'dark' : 'light') : value;
+      $('#review-theme').value = value;
+      const control = $('#settings-theme'); if (control) control.value = value;
+    }
+    systemTheme.addEventListener('change', () => setTheme(theme));
+    $('#review-material').addEventListener('change', (event) => { document.documentElement.dataset.material = event.target.value; });
+    $('#review-theme').addEventListener('change', (event) => setTheme(event.target.value));
+    function activeCompletion(id) { return completions.find((item) => item.taskId === id && !item.revoked); }
+    function complete(task) {
+      if (!activeCompletion(task.id)) completions.push({ id: `c${++serial}`, taskId: task.id, title: task.title, plannedDay: task.plannedDay, day: today, revoked: false });
+    }
+    function fixture() {
+      serial = 100; undoState = null;
+      tasks = [
+        { id: 't1', title: 'Phác thảo một ý tưởng nhỏ', plannedDay: today, deleted: false },
+        { id: 't2', title: 'Đi bộ một vòng, để điện thoại ở nhà', plannedDay: today, deleted: false },
+        { id: 't3', title: 'Đọc thêm vài trang sách', plannedDay: today, deleted: false },
+        { id: 't4', title: 'Gửi lời cảm ơn cho một người bạn', plannedDay: today, deleted: false },
+        { id: 't5', title: 'Sắp lại góc làm việc', plannedDay: '2026-10-16', deleted: false },
+        { id: 't6', title: 'Thử một công thức nấu ăn mới', plannedDay: null, deleted: false },
+        { id: 't7', title: 'Chọn sách cho cuối tuần', plannedDay: null, deleted: false },
+        { id: 't8', title: 'Tưới cây bên cửa sổ', plannedDay: '2026-10-15', deleted: false },
+        { id: 't9', title: 'Dọn một thư mục cũ', plannedDay: '2026-10-16', deleted: true },
+      ];
+      completions = [
+        { id: 'c1', taskId: 't4', title: tasks[3].title, plannedDay: today, day: today, revoked: false },
+        { id: 'c2', taskId: 't9', title: tasks[8].title, plannedDay: '2026-10-16', day: today, revoked: false },
+      ];
+      // Stable, small historical dataset. Heatmap and detail read these same records.
+      for (let index = 0; index < 365; index++) {
+        const day = new Date(Date.UTC(2025, 9, 19 + index)).toISOString().slice(0, 10);
+        const count = index % 5 === 0 ? index % 4 + 1 : 0;
+        for (let n = 0; n < count; n++) {
+          const id = `h${index}-${n}`;
+          const title = ['Ghi vài dòng nhật ký', 'Dành thời gian đọc sách', 'Sắp lại bàn làm việc', 'Đi bộ trong công viên'][n];
+          tasks.push({ id, title, plannedDay: day, deleted: true });
+          completions.push({ id: `c-${id}`, taskId: id, title, plannedDay: day, day, revoked: false });
+        }
+      }
+    }
+    function announce(text) { $('#notice').textContent = text; }
+    function mutate(change, message, focusId) {
+      undoState = structuredClone({ tasks, completions });
+      change(); render(); announce(message);
+      if (focusId) {
+        const target = document.getElementById(focusId);
+        if (target) target.focus();
+        else if (view === 'pending') $('[data-view="pending"]').focus();
+        else $('#task-title').focus();
+      }
+    }
+    $('#undo').addEventListener('click', () => {
+      if (!undoState) return;
+      ({ tasks, completions } = undoState); undoState = null;
+      render(); announce('Đã hoàn tác thao tác gần nhất.');
+      if (activePanel === 'stats') $('#history-title').focus();
+      else if (activePanel === 'settings') $('#settings-title').focus();
+      else if (view === 'pending') $('[data-view="pending"]').focus();
+      else $('#task-title').focus();
+    });
+    function showPanel(panel, focusInput = false) {
+      activePanel = panel;
+      for (const name of ['tasks', 'stats', 'settings']) $(`#${name}-panel`).hidden = name !== panel;
+      for (const name of ['tasks', 'stats']) {
+        $(`#${name}-tab`).setAttribute('aria-selected', String(name === panel));
+        $(`#${name}-tab`).tabIndex = name === panel || (panel === 'settings' && name === 'tasks') ? 0 : -1;
+      }
+      if (panel === 'stats') renderStats();
+      if (panel === 'settings') renderSettings();
+      if (focusInput) $('#task-title').focus();
+    }
+    for (const name of ['tasks', 'stats']) {
+      $(`#${name}-tab`).addEventListener('click', () => showPanel(name, name === 'tasks'));
+      $(`#${name}-tab`).addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault(); const next = name === 'tasks' ? 'stats' : 'tasks';
+        showPanel(next); $(`#${next}-tab`).focus();
+      });
+    }
+    $('#settings-button').addEventListener('click', () => { showPanel('settings'); $('#settings-title').focus(); });
+    function setView(next, day = today) {
+      view = next; selectedDay = day; state = 'ready';
+      $('#input-error').textContent = ''; $('#retry-write').hidden = true; render();
+    }
+    $$('[data-view]').forEach((node) => node.addEventListener('click', () => setView(node.dataset.view)));
+    $('#planned-date').addEventListener('change', (event) => {
+      if (event.target.value) setView(event.target.value === today ? 'today' : 'past', event.target.value);
+    });
+    $('#task-title').addEventListener('compositionstart', () => { composing = true; });
+    $('#task-title').addEventListener('compositionend', () => { composing = false; });
+    $('#task-title').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && (event.isComposing || composing || event.keyCode === 229)) event.preventDefault();
+    });
+    $('#add-completed').addEventListener('change', () => { $('#completion-hint').hidden = !$('#add-completed').checked; });
+    $('#composer').addEventListener('submit', (event) => {
+      event.preventDefault(); if (composing) return;
+      const title = $('#task-title').value.trim();
+      if (!title || [...title].length > 500) {
+        $('#input-error').textContent = 'Nhập từ 1 đến 500 ký tự, không chỉ khoảng trắng.'; $('#task-title').focus(); return;
+      }
+      if (state === 'write-error') {
+        $('#input-error').textContent = 'Chưa lưu được. Nội dung vẫn ở đây để bạn thử lại.';
+        $('#retry-write').hidden = false;
+        announce('Lỗi ghi mô phỏng · không có task mới.'); return;
+      }
+      const task = { id: `t${++serial}`, title, plannedDay: view === 'later' ? null : selectedDay, deleted: false };
+      mutate(() => { tasks.push(task); if ($('#add-completed').checked) complete(task); }, 'Đã thêm việc.');
+      $('#task-title').value = ''; $('#input-error').textContent = ''; $('#task-title').focus();
+    });
+    $('#retry-write').addEventListener('click', () => {
+      state = 'ready'; $('#retry-write').hidden = true; $('#composer').requestSubmit();
+    });
+    function toggleTask(task) {
+      mutate(() => {
+        const completion = activeCompletion(task.id);
+        if (completion) completion.revoked = true; else complete(task);
+      }, activeCompletion(task.id) ? 'Đã mở lại · Stats điều chỉnh theo ngày hoàn thành.' : 'Đã hoàn thành hôm nay.', `check-${task.id}`);
+    }
+    function taskRow(task) {
+      const done = Boolean(activeCompletion(task.id));
+      const row = element('li', `task-row${done ? ' completed' : ''}`);
+      const checkLabel = element('label', 'task-check');
+      const check = element('input'); check.type = 'checkbox'; check.checked = done; check.id = `check-${task.id}`;
+      check.setAttribute('aria-label', `${done ? 'Mở lại' : 'Hoàn thành'}: ${task.title}`);
+      check.addEventListener('change', () => toggleTask(task)); checkLabel.append(check);
+      const copy = element('div', 'task-copy'); copy.append(element('span', 'task-title', task.title));
+      if (done) copy.append(element('span', 'meta', `Đã xong · ${dateLabel(activeCompletion(task.id).day)}`));
+      const actions = element('div', 'task-actions');
+      for (const [label, glyph, handler] of [
+        ['Sửa', 'edit', () => editDialog(task)], ['Chuyển ngày', 'move', () => moveDialog(task)],
+        ['Xóa', 'delete', () => mutate(() => { task.deleted = true; }, 'Đã xóa task; lịch sử hoàn thành vẫn giữ.', 'task-title')],
+      ]) {
+        const action = button('', handler); action.append(actionIcon(glyph)); action.setAttribute('aria-label', `${label}: ${task.title}`); action.title = label; actions.append(action);
+      }
+      row.append(checkLabel, copy, actions); return row;
+    }
+    $('#task-content').addEventListener('keydown', (event) => {
+      if (!event.target.matches('input[type="checkbox"]') || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+      const checks = $$('#task-content input[type="checkbox"]');
+      const index = checks.indexOf(event.target) + (event.key === 'ArrowDown' ? 1 : -1);
+      event.preventDefault(); checks[Math.max(0, Math.min(checks.length - 1, index))]?.focus();
+    });
+    function renderTasks() {
+      const titles = { today: 'Today', later: 'Later', pending: 'Pending', past: 'Ngày đã chọn' };
+      $('#view-title').textContent = titles[view];
+      $('#view-date').textContent = view === 'later' ? 'Khi bạn sẵn sàng' : view === 'pending' ? 'Việc cũ, vẫn ở ngày cũ' : dateLabel(selectedDay);
+      $('#planned-date').value = selectedDay;
+      $$('[data-view]').forEach((node) => node.setAttribute('aria-pressed', String(node.dataset.view === view)));
+      $('#later-count').textContent = tasks.filter((t) => !t.deleted && !t.plannedDay).length;
+      $('#pending-count').textContent = tasks.filter((t) => !t.deleted && t.plannedDay && t.plannedDay < today && !activeCompletion(t.id)).length;
+      $('#task-title').placeholder = view === 'later' ? 'Một việc để làm sau…' : 'Bạn muốn làm gì hôm nay?';
+      // Pending is an aggregate, not a planned day to create against.
+      $('#composer').hidden = view === 'pending';
+      const unavailable = state === 'loading' || state === 'read-error';
+      $$('#composer input, #composer button').forEach((node) => { node.disabled = unavailable; });
+      const content = $('#task-content'); content.replaceChildren(); content.setAttribute('aria-busy', String(state === 'loading'));
+      if (state === 'loading') {
+        const loading = element('p', 'meta', 'Đang tải danh sách…'); loading.setAttribute('role', 'status'); content.append(loading);
+        for (let i = 0; i < 3; i++) content.append(element('div', 'skeleton')); return;
+      }
+      if (state === 'read-error') {
+        const error = element('div', 'empty-state');
+        const message = element('p', '', 'Chưa tải được danh sách.'); message.setAttribute('role', 'alert');
+        error.append(message, element('p', 'meta', 'Dữ liệu không bị thay đổi.'), button('Thử lại', () => { state = 'ready'; render(); }, 'primary')); content.append(error); return;
+      }
+      const visible = tasks.filter((task) => !task.deleted && (view === 'pending' ? task.plannedDay && task.plannedDay < today && !activeCompletion(task.id) : task.plannedDay === (view === 'later' ? null : selectedDay)));
+      if (!visible.length) {
+        const empty = element('div', 'empty-state'); empty.append(element('span', 'empty-symbol', '✓'), element('h3', '', view === 'pending' ? 'Không còn việc chờ từ ngày cũ' : 'Một khoảng trống cho điều mới'), element('p', 'meta', 'Bạn có thể bắt đầu bằng một việc nhỏ.')); content.append(empty); return;
+      }
+      const groups = view === 'pending' ? [...new Set(visible.map((t) => t.plannedDay))].sort().reverse() : ['open', 'done'];
+      for (const group of groups) {
+        const members = visible.filter((task) => view === 'pending' ? task.plannedDay === group : Boolean(activeCompletion(task.id)) === (group === 'done'));
+        if (!members.length) continue;
+        content.append(element('h3', 'group-heading', `${view === 'pending' ? dateLabel(group) : group === 'done' ? 'Đã xong' : view === 'later' ? 'Để làm sau' : 'Việc dự định'} · ${members.length}`));
+        const list = element('ul', 'task-list'); members.forEach((task) => list.append(taskRow(task))); content.append(list);
+      }
+    }
+    function render() {
+      renderTasks(); $('#undo').disabled = !undoState;
+      if (activePanel === 'stats') renderStats();
+    }
+    function openDialog(title, build) {
+      dialogTrigger = document.activeElement;
+      $('#dialog-title').textContent = title; $('#dialog-body').replaceChildren();
+      build($('#dialog-body')); $('#action-dialog').showModal();
+    }
+    function closeDialog() { $('#action-dialog').close(); }
+    $('#close-dialog').addEventListener('click', closeDialog);
+    $('#action-dialog').addEventListener('close', () => { if (dialogTrigger?.isConnected) dialogTrigger.focus(); });
+    function editDialog(task) {
+      openDialog('Sửa việc', (body) => {
+        const form = element('form'); const label = element('label', '', 'Nội dung');
+        const input = element('input'); input.type = 'text'; input.value = task.title; input.required = true; label.append(input);
+        const error = element('p', 'form-error'); error.setAttribute('role', 'alert');
+        const save = element('button', 'primary', 'Lưu thay đổi'); save.type = 'submit';
+        form.append(label, error, save); body.append(form);
+        form.addEventListener('submit', (event) => {
+          event.preventDefault(); const title = input.value.trim();
+          if (!title || [...title].length > 500) { error.textContent = 'Nhập từ 1 đến 500 ký tự.'; return; }
+          mutate(() => { task.title = title; }, 'Đã sửa task; snapshot lịch sử giữ nguyên.'); closeDialog(); $(`#check-${task.id}`)?.focus();
+        });
+      });
+    }
+    function moveDialog(task) {
+      openDialog('Chuyển ngày dự định', (body) => {
+        body.append(element('p', 'muted', 'Chuyển ngày không ghi nhận hoàn thành.'));
+        const label = element('label', '', 'Ngày cụ thể'); const date = element('input'); date.type = 'date'; date.value = task.plannedDay || today; label.append(date); body.append(label);
+        const move = (day) => { mutate(() => { task.plannedDay = day; }, 'Đã chuyển ngày; lịch sử hoàn thành giữ nguyên.'); closeDialog(); $('#task-title').focus(); };
+        const row = element('div', 'button-row'); row.append(button('Today', () => move(today)), button('Later', () => move(null)), button('Chọn ngày', () => { if (date.value) move(date.value); }, 'primary')); body.append(row);
+      });
+    }
+    function hideWidget() { $('#widget').hidden = true; announce(''); $('#reopen-widget').focus(); }
+    document.addEventListener('keydown', (event) => {
+      if (event.isComposing || composing) {
+        if (event.key === 'Enter') event.preventDefault();
+        return;
+      }
+      if (event.key === 'Escape' && !$('#action-dialog').open && !$('#widget').hidden) { event.preventDefault(); hideWidget(); }
+    });
+    $('#reopen-widget').addEventListener('click', () => { $('#widget').hidden = false; showPanel('tasks', true); });
+    function reopenFromHistory(item) {
+      const task = tasks.find((task) => task.id === item.taskId);
+      if (task.deleted) task.plannedDay = item.plannedDay;
+      task.deleted = false; item.revoked = true;
+    }
+    function renderStats() {
+      const panel = $('#stats-panel'); panel.replaceChildren();
+      const scroll = element('div', 'stats-scroll');
+      const header = element('div', 'button-row'); header.append(element('h2', '', 'Nhìn lại những điều đã làm'));
+      scroll.append(header, element('p', 'meta', '19/10/2025 – 18/10/2026 · Asia/Ho_Chi_Minh'));
+      const records = completions.filter((item) => !item.revoked && item.day >= '2025-10-19' && item.day <= today);
+      const counts = new Map();
+      records.forEach((item) => counts.set(item.day, (counts.get(item.day) || 0) + 1));
+      const summary = element('div', 'stats-summary');
+      summary.append(element('strong', '', String(records.length)), element('span', 'muted', 'việc hoàn thành trong 12 tháng'));
+      scroll.append(summary);
+      const heatScroll = element('div', 'heat-scroll');
+      heatScroll.setAttribute('role', 'region'); heatScroll.setAttribute('aria-label', 'Heatmap 12 tháng, cuộn ngang để xem ngày cũ');
+      const heatmap = element('div', 'heatmap'); heatmap.setAttribute('role', 'group'); heatmap.setAttribute('aria-label', 'Ngày hoàn thành, dùng phím mũi tên để chọn');
+      for (let index = 0; index < 365; index++) {
+        const day = new Date(Date.UTC(2025, 9, 19 + index)).toISOString().slice(0, 10);
+        const count = counts.get(day) || 0;
+        const cell = button('', () => { selectedHeatDay = day; renderStats(); $(`#heat-${day}`).focus(); }, 'heat-day');
+        cell.id = `heat-${day}`; cell.dataset.level = Math.min(4, count); cell.tabIndex = day === selectedHeatDay ? 0 : -1;
+        cell.setAttribute('aria-label', `${dateLabel(day)}: ${count} việc hoàn thành`);
+        cell.setAttribute('aria-pressed', String(day === selectedHeatDay)); cell.title = cell.getAttribute('aria-label');
+        cell.addEventListener('keydown', (event) => {
+          const delta = { ArrowUp: -1, ArrowDown: 1, ArrowLeft: -7, ArrowRight: 7 }[event.key];
+          if (!delta) return;
+          event.preventDefault(); const cells = [...heatmap.children]; const target = cells[index + delta];
+          if (target) {
+            cells.forEach((node) => { node.tabIndex = -1; }); target.tabIndex = 0; target.focus();
+            target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
+        });
+        heatmap.append(cell);
+      }
+      heatScroll.append(heatmap); scroll.append(heatScroll);
+      const labels = element('div', 'heat-labels meta'); labels.append(element('span', '', '← Cuộn về ngày cũ'), element('span', '', 'Ngày gần nhất →')); scroll.append(labels);
+      const legend = element('div', 'legend meta'); legend.setAttribute('aria-label', 'Mức màu: 0, 1, 2, 3 và từ 4 việc');
+      legend.append(element('span', '', '0')); for (let i = 0; i < 5; i++) legend.append(element('i')); legend.append(element('span', '', '4+')); scroll.append(legend);
+      const selector = element('label', 'day-selector meta', 'Xem một ngày');
+      const date = element('input'); date.type = 'date'; date.min = '2025-10-19'; date.max = today; date.value = selectedHeatDay;
+      date.addEventListener('change', () => {
+        if (!date.validity.valid || !date.value) return;
+        selectedHeatDay = date.value; renderStats(); $('#history-title').focus();
+      }); selector.append(date); scroll.append(selector);
+      const detail = element('section'); detail.setAttribute('aria-labelledby', 'history-title');
+      const title = element('h3', '', `Ngày ${dateLabel(selectedHeatDay)}`); title.id = 'history-title'; title.tabIndex = -1;
+      detail.append(title, element('p', 'meta', 'Ngày ghi nhận hoàn thành, độc lập với ngày dự định.'));
+      detail.append(button('↑ Trở về ô ngày đã chọn', () => { const cell = $(`#heat-${selectedHeatDay}`); cell.focus(); cell.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }));
+      const items = records.filter((item) => item.day === selectedHeatDay);
+      const list = element('ul', 'history-list');
+      for (const item of items) {
+        const task = tasks.find((task) => task.id === item.taskId);
+        const row = element('li', 'history-item');
+        row.append(element('p', '', item.title), element('p', 'meta', `✓ Đã xong · Dự định: ${item.plannedDay ? dateLabel(item.plannedDay) : 'Later'}${task.deleted ? ' · Task đã xóa' : ''}`));
+        row.append(button(task.deleted ? 'Khôi phục & mở lại' : 'Mở lại việc', () => {
+          mutate(() => reopenFromHistory(item), 'Đã mở lại; thu hồi completion và cập nhật Stats.'); $('#history-title').focus();
+        })); list.append(row);
+      }
+      if (!items.length) list.append(element('li', 'empty-state muted', '0 việc hoàn thành. Một ngày nghỉ cũng ổn.'));
+      detail.append(list); scroll.append(detail); panel.append(scroll);
+      $(`#heat-${selectedHeatDay}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    function renderSettings() {
+      const panel = $('#settings-panel'); panel.replaceChildren();
+      const header = element('div', 'view-header');
+      const title = element('h2', '', 'Settings'); title.id = 'settings-title'; title.tabIndex = -1;
+      header.append(title, button('Quay lại Tasks', () => { showPanel('tasks'); $('#settings-button').focus(); })); panel.append(header);
+      const scroll = element('div', 'settings-scroll');
+      const appearance = element('div', 'setting'); const themeLabel = element('label', '', 'Giao diện');
+      const select = element('select'); select.id = 'settings-theme';
+      for (const [value, text] of [['system', 'Theo hệ thống'], ['light', 'Light'], ['dark', 'Dark']]) {
+        const option = element('option', '', text); option.value = value; select.append(option);
+      }
+      select.value = theme; select.addEventListener('change', () => setTheme(select.value)); themeLabel.append(select); appearance.append(themeLabel);
+      const zone = element('div', 'setting'); zone.append(element('h3', '', 'Múi giờ báo cáo'), element('p', '', reportZone), element('p', 'meta', 'Giữ nguyên ngày lịch sử. MVP chưa có thao tác đổi múi giờ.'));
+      const desktop = element('div', 'setting'); const autostart = element('label', '', 'Mở cùng phiên đăng nhập');
+      const check = element('input'); check.type = 'checkbox'; check.checked = autostartEnabled;
+      check.addEventListener('change', () => { autostartEnabled = check.checked; announce('Autostart chỉ được mô phỏng; không thay cấu hình hệ điều hành.'); }); autostart.append(check);
+      desktop.append(autostart, element('h3', '', 'Gọi bảng bằng phím tắt'), element('code', '', 'tally --toggle'), element('p', 'meta', 'Trên Hyprland: bind phím bạn chọn để gọi lệnh trên. Không tự sửa keybind hay chiếm phím Super của Look.'));
+      const backup = element('div', 'setting'); const buttons = element('div', 'button-row');
+      buttons.append(button('Xuất backup', exportDialog), button('Khôi phục backup…', () => restoreDialog('preview')));
+      backup.append(element('h3', '', 'Dữ liệu & backup'), element('p', 'meta', 'Lưu local. Restore thay toàn bộ dữ liệu; luôn tạo backup trước.'), buttons);
+      const quit = element('div', 'setting'); quit.append(button('Quit Tally', () => { hideWidget(); announce(''); }, 'danger'), element('p', 'meta', 'Quit được mô phỏng bằng ẩn bảng trong trang review.'));
+      scroll.append(appearance, zone, desktop, backup, quit); panel.append(scroll);
+    }
+    let autostartEnabled = false;
+    function exportDialog() {
+      openDialog('Xuất backup · mô phỏng', (body) => {
+        body.append(element('p', '', 'Bản app sẽ xuất JSON có version, tasks, lịch sử và settings.'), element('p', 'meta', 'Mockup không ghi file. Đây là preview của thông báo sau khi xuất.'));
+        body.append(element('code', '', '…/Tally/backups/tally-2026-10-18.json'));
+      });
+    }
+    function restoreDialog(mode) {
+      openDialog('Khôi phục backup', (body) => {
+        if (mode === 'invalid') {
+          const warning = element('p', 'warning', 'File không hợp lệ hoặc version chưa hỗ trợ. Dữ liệu hiện tại được giữ nguyên.'); warning.setAttribute('role', 'alert');
+          body.append(warning, button('Chọn backup mẫu khác', () => { closeDialog(); restoreDialog('preview'); }, 'primary')); return;
+        }
+        if (mode === 'backup-error') {
+          const warning = element('p', 'warning', 'Không tạo được backup trước restore. Đã dừng; dữ liệu hiện tại được giữ nguyên.'); warning.setAttribute('role', 'alert');
+          body.append(warning, button('Thử lại bằng fixture hợp lệ', () => { closeDialog(); restoreDialog('preview'); }, 'primary')); return;
+        }
+        body.append(element('p', 'meta', 'Chọn file được mô phỏng bằng backup mẫu dưới đây; không đọc file máy bạn.'), element('code', '', 'tally-sample.json · format_version: 1'));
+        body.append(element('p', '', 'Preview: 3 task · 1 completion · Asia/Ho_Chi_Minh'));
+        body.append(element('p', 'warning', 'Thao tác sẽ thay toàn bộ dữ liệu. Không merge và không Undo restore.'));
+        body.append(element('p', 'meta', 'Backup trước restore (đường dẫn minh họa): …/Tally/backups/before-restore-2026-10-18.json'));
+        const label = element('label', 'check-label'); const confirm = element('input'); confirm.type = 'checkbox'; label.append(confirm, document.createTextNode('Tôi hiểu dữ liệu sẽ bị thay toàn bộ.'));
+        const apply = button('Khôi phục dữ liệu mẫu', () => {
+          if (!confirm.checked) return;
+          tasks = [
+            { id: 'restored-1', title: 'Việc từ backup mẫu', plannedDay: today, deleted: false },
+            { id: 'restored-2', title: 'Một việc để sau', plannedDay: null, deleted: false },
+            { id: 'restored-3', title: 'Một việc đã xong', plannedDay: '2026-10-16', deleted: true },
+          ];
+          completions = [{ id: 'restored-c', taskId: 'restored-3', title: 'Một việc đã xong', plannedDay: '2026-10-16', day: today, revoked: false }];
+          undoState = null; render(); closeDialog();
+          announce('Đã thay fixture trong RAM. Backup trước restore: …/Tally/backups/before-restore-2026-10-18.json (minh họa, không có file thật).');
+        }, 'primary'); apply.disabled = true;
+        confirm.addEventListener('change', () => { apply.disabled = !confirm.checked; });
+        body.append(label);
+        const row = element('div', 'button-row'); row.append(button('Hủy', closeDialog), apply); body.append(row);
+      });
+    }
+    function loadScenario() {
+      if ($('#action-dialog').open) closeDialog();
+      autostartEnabled = false;
+      fixture(); state = 'ready'; view = 'today'; selectedDay = today; selectedHeatDay = today;
+      $('#retry-write').hidden = true;
+      $('#task-title').value = ''; $('#input-error').textContent = ''; $('#add-completed').checked = false; $('#completion-hint').hidden = true;
+      $('#widget').hidden = false;
+      const scenario = $('#scenario').value;
+      if (['later', 'pending'].includes(scenario)) view = scenario;
+      if (['past', 'completed'].includes(scenario)) { view = 'past'; selectedDay = '2026-10-16'; }
+      if (scenario === 'completed') { $('#add-completed').checked = true; $('#completion-hint').hidden = false; }
+      if (['loading', 'read-error', 'write-error'].includes(scenario)) state = scenario;
+      if (scenario === 'empty') tasks.forEach((task) => { task.deleted = true; });
+      if (scenario === 'write-error') $('#task-title').value = 'Giữ nguyên nội dung này khi ghi lỗi';
+      if (scenario === 'long') for (let i = 0; i < 24; i++) tasks.push({ id: `long${i}`, title: i === 0 ? 'Một việc dài có dấu để kiểm tra xuống dòng. '.repeat(20).slice(0, 500) : `Việc mẫu ${i + 1} — đọc, ghi và dành thời gian nghỉ`, plannedDay: today, deleted: false });
+      if (scenario === 'zero') selectedHeatDay = '2025-10-20';
+      render(); showPanel(['stats', 'detail', 'zero'].includes(scenario) ? 'stats' : ['settings', 'backup', 'invalid', 'backup-error'].includes(scenario) ? 'settings' : 'tasks');
+      if (scenario === 'detail') $('#history-title').focus();
+      announce('Mỗi việc, một chút tiến lên.');
+      if (['backup', 'invalid', 'backup-error'].includes(scenario)) restoreDialog(scenario === 'backup' ? 'preview' : scenario);
+    }
+    $('#scenario').addEventListener('change', loadScenario);
+    setTheme('system'); loadScenario(); $('#task-title').focus();
+  </script>
+</body>
+</html>
