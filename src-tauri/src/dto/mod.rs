@@ -132,6 +132,9 @@ pub struct HistoryItemDto {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+/// Wire shape only. The provider MUST validate limit 1..=200 and require
+/// offset == 0 when revision is None before issuing any query, returning
+/// VALIDATION_ERROR at page.limit/page.offset. Deserialization is not that proof.
 pub struct PageRequest {
     pub offset: u32,
     pub limit: u32,
@@ -335,20 +338,41 @@ pub struct SetThemeDto {
     pub changed: bool,
 }
 
+/// The current backup wire format is exactly 1; not version negotiation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "u32", into = "u32")]
+pub struct FormatVersion;
+
+impl TryFrom<u32> for FormatVersion {
+    type Error = &'static str;
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value == 1 {
+            Ok(Self)
+        } else {
+            Err("formatVersion must be 1")
+        }
+    }
+}
+impl From<FormatVersion> for u32 {
+    fn from(_: FormatVersion) -> Self {
+        1
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", tag = "status", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", tag = "status")]
 pub enum ExportDataDto {
     Cancelled {},
     Exported {
         path: String,
         revision: Revision,
         #[serde(rename = "formatVersion")]
-        format_version: u32,
+        format_version: FormatVersion,
     },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", tag = "status", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", tag = "status")]
 pub enum RestorePreviewDto {
     Cancelled {},
     Ready {
@@ -357,7 +381,7 @@ pub enum RestorePreviewDto {
         #[serde(rename = "fileName")]
         file_name: String,
         #[serde(rename = "formatVersion")]
-        format_version: u32,
+        format_version: FormatVersion,
         #[serde(rename = "taskCount")]
         task_count: u32,
         #[serde(rename = "completionCount")]
