@@ -1,3 +1,4 @@
+pub mod dto;
 mod profiles;
 
 use tauri::Manager;
