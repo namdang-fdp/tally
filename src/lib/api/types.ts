@@ -3,11 +3,11 @@
  * UUID/date/timezone/title/revision semantics at their boundary.
  */
 export type Id = string;
-// Semantic aliases, not nominal/runtime validators. Never interchange their roles.
-export type TaskId = Id;
-export type CompletionId = Id;
-export type UndoToken = Id;
-export type PreviewToken = Id;
+declare const idRole: unique symbol;
+export type TaskId = string & { readonly [idRole]: 'task' };
+export type CompletionId = string & { readonly [idRole]: 'completion' };
+export type UndoToken = string & { readonly [idRole]: 'undo' };
+export type PreviewToken = string & { readonly [idRole]: 'preview' };
 export type Day = string;
 export type UtcInstant = string;
 export type Timezone = string;
@@ -116,7 +116,7 @@ export type MoveTaskRequest = {
   expectedRevision: Revision;
 };
 export type TaskIdRequest = { taskId: TaskId; expectedRevision: Revision };
-export type UndoLastRequest = { token: Id; expectedRevision: Revision };
+export type UndoLastRequest = { token: UndoToken; expectedRevision: Revision };
 export type ListTasksRequest = { view: TaskView; page: PageRequest };
 export type GetStatsRequest = {
   fromDay: Day;

@@ -3,6 +3,10 @@
  * Rust and Vitest both check contract-fixtures.json against these typed values.
  */
 import type {
+  TaskId,
+  CompletionId,
+  UndoToken,
+  PreviewToken,
   ContextDto,
   TaskDto,
   HistoryItemDto,
@@ -12,6 +16,30 @@ import type {
   PageRequest,
   FixtureSet,
 } from './types';
+type FixtureIds = {
+  task: TaskId;
+  completion: CompletionId;
+  undo: UndoToken;
+  preview: PreviewToken;
+};
+
+function isCanonicalId<Role extends keyof FixtureIds>(
+  value: string,
+): value is FixtureIds[Role] {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+    value,
+  );
+}
+
+/** Test-only validated narrowing: strings keep their exact JSON representation. */
+export function fixtureId<Role extends keyof FixtureIds>(
+  value: string,
+): FixtureIds[Role] {
+  if (!isCanonicalId<Role>(value))
+    throw new Error('Fixture ID must be a canonical UUID');
+  return value;
+}
+
 const context: ContextDto = {
   revision: '8',
   today: '2026-10-18',
@@ -20,7 +48,7 @@ const context: ContextDto = {
   undo: null,
 };
 const task: TaskDto = {
-  id: '11111111-1111-4111-8111-111111111111',
+  id: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
   title: 'Đọc sách 📚',
   plannedDay: null,
   completed: false,
@@ -28,8 +56,8 @@ const task: TaskDto = {
   updatedAt: '2026-10-18T03:00:00.000Z',
 };
 const history: HistoryItemDto = {
-  completionId: '22222222-2222-4222-8222-222222222222',
-  taskId: '44444444-4444-4444-8444-444444444444',
+  completionId: fixtureId<'completion'>('22222222-2222-4222-8222-222222222222'),
+  taskId: fixtureId<'task'>('44444444-4444-4444-8444-444444444444'),
   titleSnapshot: 'Đọc sách 📚',
   plannedDaySnapshot: '2026-10-16',
   completedAt: '2026-10-18T03:00:00.000Z',
@@ -52,9 +80,12 @@ const mutation: TaskMutationDto = {
     today: '2026-10-18',
     reportingTimezone: 'Asia/Ho_Chi_Minh',
     timezoneFallback: false,
-    undo: { token: '33333333-3333-4333-8333-333333333333', action: 'create' },
+    undo: {
+      token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
+      action: 'create',
+    },
   },
-  taskId: '11111111-1111-4111-8111-111111111111',
+  taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
   changed: true,
 };
 const firstPage: PageRequest = { offset: 0, limit: 100, revision: null };
@@ -95,7 +126,7 @@ export const contractFixtures = {
       command: 'create_task',
       args: {
         request: {
-          id: '11111111-1111-4111-8111-111111111111',
+          id: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           title: '  Đọc sách 📚  ',
           target: { kind: 'today' },
           completed: true,
@@ -108,7 +139,7 @@ export const contractFixtures = {
       command: 'create_task',
       args: {
         request: {
-          id: '11111111-1111-4111-8111-111111111111',
+          id: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           title: '  Đọc sách 📚  ',
           target: { kind: 'day', day: '2026-10-16' },
           completed: true,
@@ -121,7 +152,7 @@ export const contractFixtures = {
       command: 'create_task',
       args: {
         request: {
-          id: '11111111-1111-4111-8111-111111111111',
+          id: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           title: '  Đọc sách 📚  ',
           target: { kind: 'later' },
           completed: true,
@@ -134,7 +165,7 @@ export const contractFixtures = {
       command: 'edit_task',
       args: {
         request: {
-          taskId: '11111111-1111-4111-8111-111111111111',
+          taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           title: 'á',
           expectedRevision: '8',
         },
@@ -144,7 +175,7 @@ export const contractFixtures = {
         context: {
           ...mutation.context,
           undo: {
-            token: '33333333-3333-4333-8333-333333333333',
+            token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
             action: 'edit',
           },
         },
@@ -154,7 +185,7 @@ export const contractFixtures = {
       command: 'move_task',
       args: {
         request: {
-          taskId: '11111111-1111-4111-8111-111111111111',
+          taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           target: { kind: 'today' },
           expectedRevision: '8',
         },
@@ -164,7 +195,7 @@ export const contractFixtures = {
         context: {
           ...mutation.context,
           undo: {
-            token: '33333333-3333-4333-8333-333333333333',
+            token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
             action: 'move',
           },
         },
@@ -174,7 +205,7 @@ export const contractFixtures = {
       command: 'move_task',
       args: {
         request: {
-          taskId: '11111111-1111-4111-8111-111111111111',
+          taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           target: { kind: 'day', day: '2026-10-16' },
           expectedRevision: '8',
         },
@@ -184,7 +215,7 @@ export const contractFixtures = {
         context: {
           ...mutation.context,
           undo: {
-            token: '33333333-3333-4333-8333-333333333333',
+            token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
             action: 'move',
           },
         },
@@ -194,7 +225,7 @@ export const contractFixtures = {
       command: 'move_task',
       args: {
         request: {
-          taskId: '11111111-1111-4111-8111-111111111111',
+          taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           target: { kind: 'later' },
           expectedRevision: '8',
         },
@@ -204,7 +235,7 @@ export const contractFixtures = {
         context: {
           ...mutation.context,
           undo: {
-            token: '33333333-3333-4333-8333-333333333333',
+            token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
             action: 'move',
           },
         },
@@ -214,7 +245,7 @@ export const contractFixtures = {
       command: 'complete_task',
       args: {
         request: {
-          taskId: '11111111-1111-4111-8111-111111111111',
+          taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           expectedRevision: '8',
         },
       },
@@ -223,7 +254,7 @@ export const contractFixtures = {
         context: {
           ...mutation.context,
           undo: {
-            token: '33333333-3333-4333-8333-333333333333',
+            token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
             action: 'complete',
           },
         },
@@ -233,7 +264,7 @@ export const contractFixtures = {
       command: 'reopen_task',
       args: {
         request: {
-          taskId: '11111111-1111-4111-8111-111111111111',
+          taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           expectedRevision: '8',
         },
       },
@@ -242,7 +273,7 @@ export const contractFixtures = {
         context: {
           ...mutation.context,
           undo: {
-            token: '33333333-3333-4333-8333-333333333333',
+            token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
             action: 'reopen',
           },
         },
@@ -252,7 +283,7 @@ export const contractFixtures = {
       command: 'delete_task',
       args: {
         request: {
-          taskId: '11111111-1111-4111-8111-111111111111',
+          taskId: fixtureId<'task'>('11111111-1111-4111-8111-111111111111'),
           expectedRevision: '8',
         },
       },
@@ -261,7 +292,7 @@ export const contractFixtures = {
         context: {
           ...mutation.context,
           undo: {
-            token: '33333333-3333-4333-8333-333333333333',
+            token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
             action: 'delete',
           },
         },
@@ -271,7 +302,7 @@ export const contractFixtures = {
       command: 'undo_last',
       args: {
         request: {
-          token: '33333333-3333-4333-8333-333333333333',
+          token: fixtureId<'undo'>('33333333-3333-4333-8333-333333333333'),
           expectedRevision: '8',
         },
       },
@@ -364,7 +395,9 @@ export const contractFixtures = {
       args: { request: {} },
       response: {
         status: 'ready',
-        previewToken: '33333333-3333-4333-8333-333333333333',
+        previewToken: fixtureId<'preview'>(
+          '33333333-3333-4333-8333-333333333333',
+        ),
         fileName: 'fixture.json',
         formatVersion: 1,
         taskCount: 1,
@@ -379,7 +412,9 @@ export const contractFixtures = {
       command: 'restore_data',
       args: {
         request: {
-          previewToken: '33333333-3333-4333-8333-333333333333',
+          previewToken: fixtureId<'preview'>(
+            '33333333-3333-4333-8333-333333333333',
+          ),
           confirmed: true,
           expectedRevision: '8',
         },

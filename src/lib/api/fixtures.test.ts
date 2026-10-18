@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import shared from './contract-fixtures.json';
-import { contractFixtures } from './fixtures';
-import type { CommandName, CommandRequests, IpcError } from './types';
+import { contractFixtures, fixtureId } from './fixtures';
+import type {
+  CommandName,
+  CommandRequests,
+  IpcError,
+  TaskId,
+  CompletionId,
+  UndoToken,
+  PreviewToken,
+} from './types';
 
 describe('approved IPC fixtures (no runtime providers)', () => {
   it('keeps the typed TS fixture identical to the JSON read by Rust serde', () => {
@@ -86,7 +94,7 @@ describe('approved IPC fixtures (no runtime providers)', () => {
   it('keeps invalid consumer shapes unassignable at compile time', () => {
     type Assignable<From, To> = From extends To ? true : false;
     const missingDay: Assignable<
-      { taskId: string; target: { kind: 'day' }; expectedRevision: string },
+      { taskId: TaskId; target: { kind: 'day' }; expectedRevision: string },
       CommandRequests['move_task']
     > = false;
     const missingRevision: Assignable<
@@ -94,7 +102,11 @@ describe('approved IPC fixtures (no runtime providers)', () => {
       CommandRequests['list_tasks']
     > = false;
     const unconfirmed: Assignable<
-      { previewToken: string; confirmed: false; expectedRevision: string },
+      {
+        previewToken: PreviewToken;
+        confirmed: false;
+        expectedRevision: string;
+      },
       CommandRequests['restore_data']
     > = false;
     expect([missingDay, missingRevision, unconfirmed]).toEqual([
@@ -102,5 +114,50 @@ describe('approved IPC fixtures (no runtime providers)', () => {
       false,
       false,
     ]);
+  });
+  it('prevents assigning IDs across task, completion and token roles', () => {
+    type Assignable<From, To> = From extends To ? true : false;
+    const taskToCompletion: Assignable<TaskId, CompletionId> = false;
+    const taskToUndoRequest: Assignable<
+      TaskId,
+      CommandRequests['undo_last']['token']
+    > = false;
+    const undoToUndoRequest: Assignable<
+      UndoToken,
+      CommandRequests['undo_last']['token']
+    > = true;
+    expect([taskToUndoRequest, undoToUndoRequest]).toEqual([false, true]);
+    const taskToUndo: Assignable<TaskId, UndoToken> = false;
+    const taskToPreview: Assignable<TaskId, PreviewToken> = false;
+    const completionToTask: Assignable<CompletionId, TaskId> = false;
+    const undoToTask: Assignable<UndoToken, TaskId> = false;
+    const previewToTask: Assignable<PreviewToken, TaskId> = false;
+    const undoToPreview: Assignable<UndoToken, PreviewToken> = false;
+    const previewToUndo: Assignable<PreviewToken, UndoToken> = false;
+    expect([
+      taskToCompletion,
+      taskToUndo,
+      taskToPreview,
+      completionToTask,
+      undoToTask,
+      previewToTask,
+      undoToPreview,
+      previewToUndo,
+    ]).toEqual(Array(8).fill(false));
+  });
+
+  it('only brands canonical UUID strings at the test fixture boundary', () => {
+    const id: TaskId = fixtureId<'task'>(
+      '11111111-1111-4111-8111-111111111111',
+    );
+    expect(id).toBe('11111111-1111-4111-8111-111111111111');
+    for (const invalid of [
+      'id',
+      '',
+      'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',
+      '11111111111141118111111111111111',
+    ]) {
+      expect(() => fixtureId<'task'>(invalid)).toThrow('canonical UUID');
+    }
   });
 });
