@@ -60,3 +60,20 @@ keybind hệ thống và không chiếm phím Super mặc định của Look.
 Ghi ADR mới nếu thay stack, persistence, timezone policy hoặc mở network boundary.
 Thay đổi nhỏ trong component/module không cần ADR riêng. Không tạo abstraction,
 service hay interface ngoài nhu cầu MVP đã kiểm chứng.
+
+## IPC contract và ownership TAL-4
+
+[Contract](ipc-contract.md) đã được maintainer duyệt tại `674e689` ngày
+2026-10-18. Rust wire types ở `src-tauri/src/dto/`; TS types, test-only fixtures
+và JSON dùng chung ở `src/lib/api/`. A owns domain/storage/commands/contracts,
+manifests/lockfiles/CI. B owns UI/desktop module; root wiring/capabilities do
+coordinator xếp lượt. TAL-4 chỉ export module DTO, không đăng ký business command,
+không thêm invoke SDK/capability hoặc runtime fixture fallback.
+
+Codec kiểm shape/required-null/tag/enum; provider Rust tương lai vẫn phải validate
+semantic UUID/Day/timezone/title/paging (limit 1..200, revision null chỉ offset 0)
+trước xử lý. Không coi serialization/parity là evidence domain/DB/clock/restore.
+Khi provider chưa có, consumer giữ feature unavailable; `IPC_UNAVAILABLE` trước
+invoke mutation là `notApplied`, lỗi sau invoke có thể `unknown` theo contract.
+Backup portable theme/reporting timezone; autostart/shortcut thuộc máy hiện tại,
+không apply từ backup. Desktop provider và ngôn ngữ UI vẫn thuộc ticket sau.
