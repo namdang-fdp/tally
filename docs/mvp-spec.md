@@ -1,6 +1,7 @@
 # Tally MVP spec
 
-- Status: Draft for maintainer review; chưa cho biết app đã được triển khai.
+- Status: Policy MVP và budget đã được maintainer duyệt tại TAL-3 ngày
+  2026-10-18; chưa phải kết quả nghiệm thu app.
 - Updated: 2026-10-18
 - Stack accepted: Tauri 2 + Svelte 5 + TypeScript + Vite; Rust + SQLite local.
 - Nguồn: [concept](concept.md), [stack decision](decisions/0001-desktop-stack.md).
@@ -9,7 +10,7 @@ MVP (Minimum Viable Product) là bản nhỏ nhất đủ dùng thật để ki�
 Với Tally: người dùng muốn gọi bảng ra mỗi ngày vì ghi việc nhanh, dữ liệu đáng
 tin và nhìn lại được những gì đã hoàn thành.
 
-## 1. Quyết định đã chốt và giả định đề xuất
+## 1. Quyết định đã chốt
 
 Đã chốt với maintainer:
 
@@ -20,10 +21,19 @@ tin và nhìn lại được những gì đã hoàn thành.
 - Local/offline, không cần tài khoản; Linux trước, desktop đa nền tảng về sau.
 - Tauri + Svelte là stack triển khai.
 
-Các mặc định dưới đây là **đề xuất trong spec này**, chưa phải quyết định đã được
-maintainer xác nhận: timezone cố định từ lần chạy đầu; Pending cho việc ngày cũ;
-undo một thao tác; restore thay toàn bộ dữ liệu; ngân sách tài nguyên; màu/theme;
-hoãn streak/xu hướng và CLI thêm task. Maintainer có thể điều chỉnh trước triển khai.
+Maintainer đã duyệt thêm tại TAL-3 ngày 2026-10-18:
+
+- Reporting timezone cố định từ lần chạy đầu theo mục 5.
+- Pending cho việc ngày cũ chưa xong; Undo một thao tác trong phiên.
+- Restore thay toàn bộ dữ liệu, có preview/xác nhận và backup trước restore.
+- Import tối đa 20 MiB và tổng 100.000 task/completion record.
+- Theme system/light/dark; visual mockup v02 đã được duyệt tại TAL-2.
+- Hoãn streak, xu hướng và CLI CRUD; giữ phạm vi ngoài MVP ở mục 2.
+- Budget release và phép đo tại mục 7. Duyệt mục tiêu không có nghĩa đã đo đạt.
+
+Repo hiện có scaffold và mockup; nghiệp vụ task/DB và nghiệm thu AC-01–15 vẫn
+thuộc các ticket tiếp theo. Việc duyệt spec không thay quyền thao tác Git hay
+quyết định triển khai của từng ticket.
 
 ## 2. Đối tượng và phạm vi
 
@@ -58,7 +68,7 @@ Windows/macOS chưa phải nền tảng nghiệm thu của MVP; không tuyên b�
 
 ### Bố cục và bàn phím
 
-- Hai tab Tasks / Stats. Bảng Tasks đề xuất rộng 480 px, chiều cao theo nội dung,
+- Hai tab Tasks / Stats. Bảng Tasks rộng 480 px, chiều cao theo nội dung,
   tối đa 70% chiều cao vùng làm việc; danh sách dài cuộn trong bảng.
 - Header nhỏ, ô nhập, nội dung Today hoặc ngày đang chọn, lối vào Later và Pending.
 - Pending liệt kê việc **chưa hoàn thành** ở ngày trước Today, nhóm theo ngày và
@@ -125,7 +135,7 @@ Delete task không giảm số này. Reopen giảm ngày 20; hoàn thành lại 
 
 ## 5. Clock, timezone và Stats
 
-Đề xuất timezone policy:
+Timezone policy đã duyệt:
 
 - Lần đầu lấy timezone IANA của hệ điều hành và lưu làm reporting timezone.
   Nếu không xác định được, dùng UTC và hiển thị thông báo trong settings.
@@ -158,7 +168,7 @@ Stats:
 - Import trong MVP là **restore thay toàn bộ dataset**, không phải merge. Preview
   số task/completion và timezone, cảnh báo thay dữ liệu, yêu cầu xác nhận.
 - Validate version, kiểu, ID duy nhất, reference, ngày/timezone và invariant trước
-  khi đổi dữ liệu. Giới hạn đề xuất: file 20 MiB và tổng 100.000 task/completion record.
+  khi đổi dữ liệu. Giới hạn: file 20 MiB và tổng 100.000 task/completion record.
 - Tạo snapshot backup dữ liệu hiện tại trước restore; nếu backup lỗi thì không restore.
   Ghi nhận vị trí backup để user có thể chọn khôi phục, không âm thầm xóa backup.
 - Restore dùng transaction: malformed/unsupported/truncated file hoặc bất kỳ lỗi
@@ -167,13 +177,14 @@ Stats:
 - Backup thủ công qua export và backup trước restore/migration thuộc MVP; lịch sao
   lưu tự động, retention policy và sync backup để sau.
 
-## 7. Ngân sách tài nguyên đề xuất
+## 7. Ngân sách tài nguyên đã duyệt
 
-Đây là **mục tiêu cần review**, chưa có benchmark chứng minh và không phải cam kết
-do framework tự bảo đảm. Đo release build, không có Vite dev server, trên máy tham
-chiếu trong [development guide](development.md), với 10.000 task và 10.000 completion giả.
+Đây là **mục tiêu đã được maintainer duyệt tại TAL-3**, chưa có benchmark chứng minh
+và không phải cam kết do framework tự bảo đảm. Đo release build, không có Vite dev
+server, trên máy tham chiếu trong [development guide](development.md), với 10.000
+task và 10.000 completion giả.
 
-| Chỉ số | Mục tiêu đề xuất | Phương pháp |
+| Chỉ số | Mục tiêu đã duyệt | Phương pháp |
 | --- | --- | --- |
 | Mở bảng khi đã chạy nền | p95 ≤ 200 ms | 50 lần, từ nhận yêu cầu toggle đến ô nhập nhận được text |
 | RAM khi ẩn | Tổng RSS ≤ 250 MiB | Toàn bộ process Rust/WebView thuộc app, sau khi dùng rồi ẩn 60 giây |
@@ -182,7 +193,7 @@ chiếu trong [development guide](development.md), với 10.000 task và 10.000 
 
 Ghi cả engine/OS, commit, dataset, cách đo và mẫu thô. Nếu không đạt, xác định
 nguyên nhân và đề xuất điều chỉnh; không tự nới budget hoặc bỏ process khỏi phép đo.
-Cold-start phải đo và công bố, chưa đặt ngưỡng trong MVP draft này.
+Cold-start phải đo và công bố; MVP chưa đặt ngưỡng cold-start.
 
 ## 8. Acceptance criteria
 
@@ -230,9 +241,10 @@ trong [development guide](development.md), không tạo manifest/script giả tr
 - Svelte/Vitest: state hiển thị, empty/error, keyboard và composition event.
 - App thật: Hyprland shortcut/focus, IME tiếng Việt, file dialog, nhiều màn hình,
   autostart và artifact đã đóng gói; browser test không thay thế desktop smoke.
-- CI scaffold phải chạy frontend check/lint/test/build, Rust fmt/clippy/test,
-  dependency audit và Linux app build. CI hiện tại chỉ là repo checks.
-- Không đặt phần trăm coverage tùy tiện trong draft; mỗi invariant có test gây đỏ
+- CI scaffold đã có frontend check/lint/test/build, Rust fmt/clippy/test,
+  dependency audit và Linux app build; PR #3/#4 đã merge với checks xanh.
+  Các kết quả đó chưa chứng minh nghiệm thu nghiệp vụ hay budget release.
+- Không đặt phần trăm coverage tùy tiện; mỗi invariant có test gây đỏ
   khi hành vi sai, còn các giới hạn desktop phải có kết quả smoke test ghi lại.
 
 ## 10. Boundaries và điều kiện bắt đầu
@@ -247,6 +259,8 @@ tác/chi tiết đã nằm trong yêu cầu được duyệt.
 **Không làm:** tự rollover task, xóa history khi delete, gửi task vào log/telemetry,
 chạy test trên dữ liệu thật, tắt test/check để xanh, commit/push/publish khi chưa được yêu cầu.
 
-Trước triển khai, maintainer review các mặc định ở mục 1 và budget mục 7, cùng
-phác thảo Tasks/Stats. Spec này không tự cấp phép triển khai cả MVP. Bước thiết kế
-tiếp theo phải giữ scope đã duyệt; không coi chức năng ngoài MVP là việc cần làm ngay.
+Maintainer đã duyệt các mặc định ở mục 1, budget mục 7 và visual Tasks/Stats v02.
+TAL-3 ghi nhận quyết định và kiểm tra prerequisite; TAL-4 cụ thể hóa IPC contract
+trước các nhánh triển khai phụ thuộc. Mỗi ticket cần spec/plan và acceptance
+criteria trước khi code; quyết định mới ngoài phạm vi đã duyệt cần maintainer
+review. Không coi chức năng ngoài MVP là việc cần làm ngay.

@@ -1,9 +1,10 @@
 # Spec TAL-2: Widget Tasks/Stats và mockup light/dark
 
 - Trạng thái: Spec và visual mockup v02 đã được người dùng chấp thuận ngày
-  2026-10-18, theo xác nhận bàn giao từ coordinator. Policy MVP vẫn chờ TAL-3.
-- Bàn giao: [PR #4](https://github.com/namdang-fdp/tally/pull/4). TAL-1 #3 đã merge;
-  coordinator cho phép rebase trên main, chạy lại checks và chuyển Ready khi đạt.
+  2026-10-18. Policy MVP và budget đã được maintainer duyệt tại TAL-3 cùng ngày;
+  xem [MVP spec](mvp-spec.md), không coi đây là kết quả nghiệm thu app.
+- Bàn giao: [PR #4](https://github.com/namdang-fdp/tally/pull/4) đã merge thành
+  `67006f821b7d3510840fba3184f261dceea279b8`; TAL-2 Done sau review/tích hợp.
 - Base cập nhật: `34ff7bcb8bd4e9fbce740a5c97a3c7fa91b99afb` ngày 2026-10-18.
 - Ngày: 2026-10-18.
 - Nhánh: `feature/tal-2-widget`.
@@ -27,8 +28,8 @@ Giả định để review:
    không thêm dependency, font tải ngoài, CDN, network hay database.
 3. Nội dung giao diện mẫu bằng tiếng Việt; giữ tên Tasks, Stats, Today, Later và
    Pending để đối chiếu spec. Ngôn ngữ sản phẩm cuối cùng chưa được chốt.
-4. Người dùng đã chấp thuận visual v02 làm cơ sở bàn giao. Các policy MVP còn mở
-   vẫn là đề xuất; duyệt visual TAL-2 không tự duyệt policy của checkpoint TAL-3.
+4. Người dùng đã chấp thuận visual v02 làm cơ sở bàn giao, sau đó duyệt policy
+   MVP tại TAL-3. Visual và policy là hai quyết định riêng đã được ghi nhận.
 
 Ưu tiên MVP spec khi concept đề cập streak, xu hướng hoặc CLI thêm task; các phần
 đó không xuất hiện trong mockup. Không thay hành vi MVP bằng quyết định thị giác.
@@ -221,7 +222,7 @@ file ownership, ghi nơi xem trong README. Không coi checklist dự kiến là 
 | UI-04 | Loading/empty/lỗi đọc/lỗi ghi/restore lỗi có thông báo; không trình bày thao tác OS/DB thật đã thành công |
 | UI-05 | Có đo contrast light/dark trên các cặp thực tế; reduced motion hoạt động; action truy cập được khi focus, không cần hover |
 | UI-06 | Các luồng planned day/completion/delete/reopen/undo/restore khớp MVP; không có rollover, streak hoặc chức năng ngoài scope |
-| UI-07 | Maintainer có cách mở và xem ảnh/mockup; README ghi kết quả thật, visual v02 đã được user chấp thuận và các policy còn chờ TAL-3 |
+| UI-07 | Maintainer có cách mở và xem ảnh/mockup; README ghi kết quả thật; trạng thái duyệt visual v02 và policy TAL-3 được phân biệt với nghiệm thu app |
 | UI-08 | `python3 scripts/check_repository.py` và `git diff --check` thành công; diff chỉ thuộc bốn file ownership |
 
 Test DOM cho composition chỉ kiểm tra handler; nhập tiếng Việt bằng bộ gõ thật
@@ -241,19 +242,21 @@ thao tác phá dữ liệu. Chi tiết thực hiện trong scope đã duyệt kh
 cầu; sửa app/CI/lockfiles; ghi dữ liệu thật; đánh TAL-2 Done hay coi proposal đã
 duyệt chỉ vì mockup chạy. Trạng thái review/tích hợp cần đúng bằng chứng và quyền được giao.
 
-## 9. Quyết định còn mở và điểm dừng
+## 9. Quyết định và giới hạn bàn giao
 
-Người dùng đã duyệt spec, sau đó chấp thuận visual mockup v02. Chỉ dẫn bàn giao
-mới từ coordinator thay yêu cầu cũ “không commit”: cho phép commit/push nhánh này
-và cập nhật PR #4 về `main`. TAL-1 #3 đã merge; được phép cập nhật main và chuyển
-Ready sau khi checks của HEAD mới đạt. Không merge/bật auto-merge/publish hoặc
-làm task tiếp theo.
+Người dùng đã duyệt spec, sau đó chấp thuận visual mockup v02. PR #4 đã merge
+sau khi checks của HEAD `c678cceaed5988e0944ca911599a0700098f8d65` đạt;
+TAL-1/TAL-2 đều đã Done. Quyền commit/push/PR của TAL-2 chỉ áp dụng bàn giao đó;
+quyền cho các ticket tiếp theo do maintainer cấp riêng và đã được ghi tại
+[AGENTS.md](../AGENTS.md). Ticket phụ thuộc vẫn cần đủ prerequisite đã tích hợp.
 Plan, mockup và nhật ký kiểm chứng hiện nằm trong `docs/design/`; v02 đã mở và
 kiểm tra trong browser Orca; giới hạn desktop vẫn giữ nguyên. Xem README để mở
 mockup và chạy lại các kiểm tra fixture. Visual review không thay nghiệm thu app
-hoặc tích hợp. TAL-2 giữ In Review; không tự chuyển Done. Ngôn ngữ sản phẩm cuối
-cùng chưa chốt; mockup dùng nội dung tiếng Việt như cơ sở review.
+hoặc tích hợp. Ngôn ngữ sản phẩm cuối cùng chưa chốt; mockup dùng nội dung tiếng
+Việt như cơ sở review. Điểm này chưa chặn thiết kế DTO/command ở TAL-4; cần chốt
+trước khi đóng băng nội dung UI sản phẩm.
 
 Timezone cố định, Pending, Undo một cấp, restore replace, giới hạn import, theme
-và budget tài nguyên vẫn là đề xuất của MVP. TAL-2 minh họa các lựa chọn đó để
-TAL-3 review, không thay trạng thái quyết định hay gỡ gate cho ticket phụ thuộc.
+và budget tài nguyên đã được maintainer duyệt tại TAL-3 ngày 2026-10-18 theo
+[MVP spec](mvp-spec.md). Contract kỹ thuật được cụ thể hóa ở TAL-4; các gate
+review/tích hợp và kiểm chứng desktop vẫn áp dụng cho ticket tiếp theo.
