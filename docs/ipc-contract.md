@@ -43,8 +43,10 @@ Một Tauri command nhận một argument `{ request: ... }`; query không tham 
 `{ request: {} }`. Tên command Rust `snake_case`, JSON/TS `camelCase`.
 Rust trả `Result<T, IpcError>`: resolve là DTO thành công, reject là lỗi có kiểu;
 không trộn envelope `{ok,data}` hoặc trả `null` để che lỗi. Lỗi transport/deserialize
-không có shape domain được adapter ánh xạ sang `IPC_UNAVAILABLE` với outcome
-`unknown`; không tự kết luận DB chưa commit. Không thêm HTTP/network boundary.
+không có shape domain được adapter ánh xạ sang `IPC_UNAVAILABLE`: sau invoke
+mutation là outcome `unknown`, query là `notApplicable`; provider thiếu được
+phát hiện trước invoke mutation là `notApplied` (mapping đầy đủ mục 4).
+Không tự kết luận DB chưa commit. Không thêm HTTP/network boundary.
 
 | Kiểu | Biểu diễn và validation Rust |
 | --- | --- |
@@ -75,6 +77,7 @@ nhưng vẫn hợp lệ theo code points. Không log title hoặc nội dung bac
 | `MutationGuard` | `expectedRevision: Revision` |
 | `TaskMutationDto` | `context: ContextDto`, `taskId: Id`, `changed: boolean` |
 | `SettingsDto` | `theme: "system" \| "light" \| "dark"`, `reportingTimezone: Timezone`, `timezoneFallback: boolean` |
+| `RecoveryBackupDto` | `path: string`, `completedAt: UtcInstant`; metadata công khai của backup đã hoàn tất, không chứng nhận restore thành công |
 
 Các DTO tên `ContextDto` dùng `revision: Revision`; cột rút gọn không làm field
 optional. `TaskDto` chỉ dành cho task chưa xóa; `completed` suy ra từ completion
@@ -104,6 +107,7 @@ Read trả snapshot nhất quán trong một lần gọi; mutation resolve sau c
 | `export_data` | `{}` | `{status: "cancelled"}` hoặc `{status: "exported", path: string, revision: Revision, formatVersion: 1}` |
 | `preview_restore` | `{}` | `{status: "cancelled"}` hoặc `RestorePreviewDto` bên dưới |
 | `restore_data` | `{previewToken: Id, confirmed: true, guard}` | `{context, backupPath: string, taskCount: integer, completionCount: integer}` |
+| `get_restore_recovery` | `{}` | `{backupDirectory: string, latestBackup: RecoveryBackupDto \| null}`; tìm lại backup sau lỗi/mất response/restart, không thay dataset |
 
 `TaskView` là union `{kind:"day", day:Day}`, `{kind:"later"}` hoặc
 `{kind:"pending"}`. UI dùng view day với `context.today` cho Today. Day/Later gồm
@@ -188,9 +192,29 @@ request chưa xác định. Chưa có receipt để replay nguyên response qua 
 Nếu file/DB lỗi không đọc được để đối chiếu thì giữ trạng thái chưa xác định,
 chặn ghi tiếp và cho retry tải; không đoán thành công/thất bại.
 
-Reject DTO duy nhất: `{code, message, field: string | null, retryable: boolean}`.
+Reject DTO `IpcError` duy nhất: `{code, message, field: string | null,
+retryable: boolean, outcome: "notApplied" | "unknown" | "notApplicable",
+recoveryBackup: RecoveryBackupDto | null}`. Mọi field luôn có mặt.
 `message` an toàn để hiển thị, không SQL/path nội bộ/title; UI dùng `code` để xử lý,
 không parse message. `retryable` chỉ báo có thể thử lại, không tự replay mutation.
+`recoveryBackup` chỉ lộ vị trí backup dành cho user phục hồi, không DB/temp path.
+Outcome áp dụng cho effect chính của command: dataset mutation, export file hoặc
+OS setting. Query dùng `notApplicable`. Backup trước restore là effect phụ được
+biểu diễn riêng, nên có thể tồn tại cùng restore `notApplied`.
+
+| Nguồn lỗi | `outcome` và hành vi UI |
+| --- | --- |
+| Query/read/preview không có mutation dataset hoặc file đích | `notApplicable`; retry query, không suy luận kết quả mutation trước đó |
+| Adapter biết provider thiếu trước invoke | `IPC_UNAVAILABLE`, `notApplied` cho mutation (`notApplicable` cho query), retryable false; disable feature, giữ draft |
+| Rust validation/guard lỗi hoặc transaction xác nhận rollback | `notApplied`: intent này không đổi dataset; restore vẫn có thể đã tạo recovery backup riêng |
+| Transport/timeout/deserialize lỗi sau invoke mutation hoặc không xác định đã dispatch | `IPC_UNAVAILABLE`, `unknown`; giữ draft, chặn ghi tiếp, query đối chiếu, không tự replay |
+| Provider không thể xác nhận rollback/commit hoặc OS effect một phần | `unknown` dù code là `STORAGE_ERROR`, `INTERNAL_ERROR` hoặc `DESKTOP_ERROR`; không giả định chưa áp dụng |
+
+`notApplied` chỉ nói intent đang báo lỗi, không phủ nhận intent trước đã commit.
+Nếu DB báo lỗi commit nhưng rollback chưa được xác nhận thì phải dùng `unknown`.
+Adapter không đổi typed reject hợp lệ từ Rust thành unknown; reject/response sai
+shape sau invoke mutation mới ánh xạ unknown. Query thất bại sau mutation unknown
+vẫn giữ trạng thái chưa xác định của mutation, không xóa nó vì query notApplicable.
 
 | Code | Điều kiện, recovery |
 | --- | --- |
@@ -206,9 +230,14 @@ không parse message. `retryable` chỉ báo có thể thử lại, không tự 
 | `BACKUP_FAILED` | Không tạo/hoàn tất backup trước restore; tuyệt đối không replace |
 | `FILE_IO_ERROR` | Đọc/ghi/rename file thất bại; không báo export thành công |
 | `STORAGE_BUSY` | Lock DB tạm thời, transaction chưa commit; có thể user retry |
-| `STORAGE_ERROR` | Lỗi DB/commit, rollback mutation; cần tải lại hoặc xử lý storage |
+| `STORAGE_ERROR` | Lỗi DB/commit; `notApplied` chỉ khi rollback đã xác nhận, còn lại `unknown`; tải lại hoặc xử lý storage |
 | `IPC_UNAVAILABLE` | Adapter-only: provider thiếu, transport lỗi hoặc response không hợp lệ; outcome có thể unknown |
 | `INTERNAL_ERROR` | Lỗi không dự kiến; không lộ internals, tải lại để đối chiếu trước khi ghi |
+| `DESKTOP_UNSUPPORTED` | Reserved cho B: OS/provider không hỗ trợ feature, mutation chưa invoke/apply thì `notApplied`; disable control, hướng dẫn compositor nếu phù hợp |
+| `DESKTOP_ERROR` | Reserved cho B: thao tác OS lỗi; `notApplied` khi xác nhận không đổi, `unknown` nếu có thể partial; reload desktop settings, không tự lặp OS action |
+
+Hai mã desktop được reserve cho typed consumer, chưa freeze provider/validation
+hoặc semantics partial OS failure; B/coordinator cần review chi tiết trước code.
 
 Chỉ `STORAGE_BUSY`, lỗi I/O tạm thời và transport tạm thời có thể
 `retryable:true`; provider thiếu/validation/conflict không tự retry. Query lỗi
@@ -229,7 +258,8 @@ thay Undo; không tạo trạng thái task/history lệch nhau.
    cũ không được overwrite state sau mutation mới. Không cần event stream.
 4. Ghi đã acknowledge nhưng refresh lỗi: thông báo “đã lưu, chưa tải lại được”,
    giữ dấu stale, chỉ retry query. Mutation unknown: thông báo chưa xác định,
-   refresh để đối chiếu, không báo thành công và không tự gửi lại.
+   refresh để đối chiếu theo `error.outcome`, không báo thành công và không tự
+   gửi lại. Restore unknown còn gọi `get_restore_recovery` để hiện backup đã tạo.
 5. Rust dùng clock có thể inject. UI hỏi context khi mở/focus và tại thời điểm
    dự kiến qua nửa đêm; timer chỉ kích hoạt query, không tự tính reporting day.
    Today đổi ngày thì tải view Today/Pending/Stats; ngày cụ thể đang chọn giữ
@@ -274,6 +304,12 @@ xem vị trí, không là capability tùy ý mở/ghi file qua frontend.
 completion, không chỉ active. UI cảnh báo replace, hiện counts/timezone và yêu cầu
 xác nhận rõ trước `confirmed:true`; không tự xác nhận khi mở preview.
 
+Không yêu cầu UI hiện một file backup đã tồn tại trước confirmation: backup chỉ
+được tạo sau xác nhận. Nếu UI hiển thị thư mục/vị trí dự kiến, phải ghi “dự kiến,
+chưa tạo”; đó không phải `RecoveryBackupDto` và không bảo đảm ghi file sẽ thành
+công. AC-11 được chứng minh bằng vị trí backup thực sự đã hoàn tất, kể cả khi
+restore sau đó thất bại; không suy ra có backup chỉ từ preview ready.
+
 Token cần thiết để restore đúng nội dung đã preview, không mở lại path có thể đã
 bị đổi file. Rust giữ một snapshot bytes/parsed data đã validate, tối đa một token
 trong process, hết hạn sau 10 phút hoặc preview ready mới thay thế. Preview lưu
@@ -284,11 +320,36 @@ Giới hạn snapshot 20 MiB và 100.000 record; không thêm token store bền 
 
 Restore kiểm token/guard/xác nhận rồi serialize writer: tạo backup hoàn chỉnh của
 dataset hiện tại, ghi an toàn và giữ vị trí trước khi replace transaction. Backup
-lỗi thì dừng; transaction restore lỗi rollback dataset/Undo/revision, backup đã
-tạo có thể còn và không âm thầm xóa. Thành công tăng revision của profile, xóa
+lỗi thì dừng; transaction restore lỗi có rollback xác nhận giữ nguyên
+dataset/Undo/revision, backup đã tạo vẫn được giữ và không âm thầm xóa. Thành công tăng revision của profile, xóa
 Undo/token, reload settings/context/Tasks/Stats; không dùng Undo một cấp để đảo
 restore. Retry mất response với guard cũ không replace lần nữa. Nếu đã restart
 mất token, query state và xem backup để đối chiếu, không tự restore lại.
+
+Trước khi cho phép replace, Rust phải hoàn tất backup và persist metadata phục hồi công
+khai `{path,completedAt}` ngoài dataset bị replace; metadata sống qua restart và
+restore, không nằm trong payload backup. Không persist được metadata thì dừng
+với `BACKUP_FAILED`, dataset chưa thay. Chỉ công bố file đã finalize an toàn,
+không công bố temp/partial file. Nếu process chết giữa finalize và persist
+metadata, recovery query phải tìm được file hoàn tất trong thư mục backup do
+Rust quản lý; không dựa duy nhất vào response đã có thể mất. Chi tiết lưu metadata
+thuộc provider sau duyệt, không thay SQL/schema trong SPECIFY.
+
+`get_restore_recovery` trả thư mục backup công khai và metadata backup hoàn tất
+gần nhất (null nếu chưa có); UI cho user xem/copy vị trí, kể cả sau restart hoặc
+response mất. Backup cũ vẫn giữ trong thư mục này, không tự xóa khi có backup
+mới; đây không phải receipt ledger hoặc bằng chứng restore đã commit. Query
+này đọc metadata/file do Rust quản lý, không cho UI duyệt arbitrary filesystem,
+không tăng revision dataset hoặc tiêu thụ Undo. Nếu user xóa file ngoài app,
+provider không báo file đó còn khả dụng; query tìm backup hoàn tất còn tồn tại,
+hoặc trả null, và vẫn cho biết thư mục công khai.
+
+Restore failure sau backup trả `IpcError.recoveryBackup` với path thực tế;
+failure trước khi có backup trả null. Transport error do adapter tạo dùng null
+vì chưa biết path; UI gọi `get_restore_recovery` (khi IPC trở lại) cùng refresh
+context/tasks/history/Stats. Nếu recovery query lỗi, hiển thị chưa tải được vị
+trí, cho retry query, không tự gọi restore lại. Có metadata chỉ chứng minh đã
+tạo backup; dataset hiện tại vẫn phải query riêng để đối chiếu outcome unknown.
 
 Export chụp dataset ở một revision nhất quán, ghi file tạm rồi finalize an toàn;
 lỗi không để file đích nửa chừng. Revision trả về là snapshot đã export, không
@@ -390,9 +451,36 @@ Pending count 1, Undo null. Retry create nguyên body guard `7` luôn conflict:
   "code": "REVISION_CONFLICT",
   "message": "Dữ liệu đã thay đổi. Hãy tải lại trước khi thao tác.",
   "field": "expectedRevision",
-  "retryable": false
+  "retryable": false,
+  "outcome": "notApplied",
+  "recoveryBackup": null
 }
 ```
+
+Ví dụ lỗi độc lập, không nối vào revision của chuỗi task trên:
+
+```json
+{
+  "code": "STORAGE_ERROR",
+  "message": "Không thể thay dữ liệu. Dữ liệu trước restore được giữ nguyên.",
+  "field": null,
+  "retryable": false,
+  "outcome": "notApplied",
+  "recoveryBackup": {
+    "path": "/home/demo/Tally-backups/before-restore-20261018-030000.json",
+    "completedAt": "2026-10-18T03:00:00.000Z"
+  }
+}
+```
+
+Ví dụ này chỉ hợp lệ khi provider xác nhận rollback. UI hiện lỗi cùng vị trí
+backup, giữ state/draft, query lại trước intent mới. Nếu response restore mất,
+adapter trả `{code:"IPC_UNAVAILABLE",message:"Chưa xác định kết quả restore.",
+field:null,retryable:true,outcome:"unknown",recoveryBackup:null}`; UI không báo
+restore thất bại chắc chắn hoặc thành công, query recovery có thể trả cùng
+path/instant trên và query dataset riêng. Provider thiếu được phát hiện trước
+invoke mutation dùng cùng shape nhưng `outcome:"notApplied",retryable:false`;
+UI disable feature, không trình bày như trường hợp có thể đã commit.
 
 Ví dụ thời gian độc lập, cùng timezone trên: `get_context` tại
 `2026-10-18T16:59:59.900Z` trả Today `2026-10-18`, revision `20`. Không có dữ liệu
@@ -489,8 +577,8 @@ Strategy sau khi được duyệt, không phải plan triển khai trong lượt
 | TAL-4 TS/Vitest | Fixture typecheck bằng `pnpm check`, parity với JSON Rust, adapter unavailable không giả success; request/error shape thống nhất |
 | Provider Rust unit/integration | Fixed clock/timezone/DST; context trước nửa đêm, create/move thực thi sau nửa đêm với guard không đổi: today resolve ngày mới, explicit day/Later giữ nguyên, completion dùng cùng instant; task cũ không rollover. Lifecycle invariant, atomic create-completed/reopen/Undo, retry mất response/double complete, restart revision, failure rollback; DB TempDir |
 | Provider query boundary | Revision null chỉ nhận offset 0; null + offset > 0 validation, page tiếp dùng revision cụ thể, thay dữ liệu giữa page conflict; không trộn snapshot |
-| Data provider | Round trip task/deleted/revoked/settings/Stats; invalid version/ID/reference/limit/truncated; file đổi sau preview, stale/expired token, backup/commit/rename lỗi không thay dataset |
-| UI Vitest/Testing Library | Loading/empty/stale/error, draft/IME handler, invalidate/refresh/generation, không optimistic success hoặc tự replay mutation; Undo không chiếm text Ctrl+Z |
+| Data provider | Round trip task/deleted/revoked/settings/Stats; invalid version/ID/reference/limit/truncated; file đổi sau preview, stale/expired token. Backup/metadata lỗi chặn replace; rollback xác nhận trả notApplied + backup path nếu đã tạo; crash sau finalize/trước metadata, mất response và restart vẫn tìm được backup hoàn tất; metadata không chứng nhận restore thành công |
+| UI Vitest/Testing Library | Loading/empty/stale/error, draft/IME handler, invalidate/refresh/generation; provider missing trước invoke → notApplied, transport/deserialize sau invoke mutation → unknown, query → notApplicable; unknown giữ draft/chặn ghi/refresh + recovery query cho restore, không tự replay; phân biệt vị trí dự kiến/backup đã tạo; Undo không chiếm text Ctrl+Z |
 | App thật | Tauri file dialog/focus/shortcut/IME/restore/restart trên Hyprland, provider integration và release budget mục 7; browser/fixture không chứng minh các AC desktop |
 
 Không đặt coverage % mới, không coi check link là test DTO hoặc app build. Budget
@@ -535,8 +623,9 @@ kỹ thuật mới; coordinator cần chuyển maintainer review trước PLAN/D
    ở máy hiện tại khi restore? MVP yêu cầu giữ settings nhưng chưa phân loại OS
    state. B phải review nhóm desktop/settings/file dialog trước triển khai.
 4. **Chặn restore provider:** chấp thuận Rust native file dialog và một preview
-   snapshot token/10 phút, stale sau mọi mutation, backup format ở mục 6? Token
-   chỉ bảo đảm nội dung preview, không mở thêm capability filesystem cho UI.
+   snapshot token/10 phút, stale sau mọi mutation, backup format và public recovery
+   metadata/query ở mục 6? Token chỉ bảo đảm nội dung preview, metadata chỉ chỉ
+   ra backup đã tạo; không receipt ledger hoặc quyền filesystem tùy ý cho UI.
 
 Ngôn ngữ UI sản phẩm chưa chốt theo TAL-2; message tiếng Việt ở đây chỉ minh họa,
 không chặn DTO machine codes. Không hỏi lại timezone/Pending/Undo replace policy,
