@@ -21,14 +21,17 @@ phiên; restore replace có preview/xác nhận/backup; import tối đa 20 MiB 
 hoãn trong MVP giữ nguyên. Không xin duyệt lại các policy này.
 
 **Contract kỹ thuật TAL-4 đã duyệt:** tên command, DTO, mã lỗi, thứ tự dữ liệu,
-revision, preview token và flow kỹ thuật bên dưới. Giả định app một instance,
+revision, preview token và flow kỹ thuật bên dưới; chi tiết desktop provider vẫn
+mở. Giả định app một instance,
 UI và Rust phát hành cùng artifact; không cần version negotiation IPC hoặc API
 bên ngoài. `format_version` của backup là version riêng, không phải version IPC.
 
 Hiện `src-tauri/src/lib.rs` chỉ bootstrap/profile resolver, chưa đăng ký command
-nghiệp vụ; chưa có DB, Rust DTO, frontend IPC SDK hay adapter. Các command dưới
-đây là **contract đích, chưa có provider**, không phải lời hứa runtime chạy được.
-Maintainer cho phép lập plan rồi triển khai DTO/fixture ngay, bỏ gate duyệt plan/task riêng; không triển khai domain/DB/provider.
+nghiệp vụ; chưa có DB, frontend IPC SDK hay adapter. TAL-4 bổ sung Rust/TS wire
+DTO và shared fixture, chưa thêm provider. Các command dưới
+đây là **contract đã duyệt, chưa có provider**, không phải lời hứa runtime chạy được.
+Maintainer cho phép lập plan rồi triển khai DTO/fixture ngay, bỏ gate duyệt
+plan/task riêng; không triển khai domain/DB/provider.
 
 Theo contract đã duyệt và quyền triển khai sau plan, TAL-4 định nghĩa Rust/TS DTO và
 fixture giả dùng chung, kiểm serialization/typecheck/null/date/Unicode. Chỉ
@@ -50,7 +53,7 @@ Không tự kết luận DB chưa commit. Không thêm HTTP/network boundary.
 
 | Kiểu | Biểu diễn và validation Rust |
 | --- | --- |
-| `Id` | UUID dạng chuỗi lowercase canonical; task/completion/token là các loại riêng trong TS, không dùng số ID |
+| `Id` | UUID dạng chuỗi lowercase canonical; task/completion/token là branded string phân biệt vai trò trong TS, không dùng số ID |
 | `Day` | Chuỗi ngày Gregorian `YYYY-MM-DD`, năm 0001–9999; kiểm cả ngày hợp lệ, không chỉ regex; không chuyển qua JS `Date` |
 | `UtcInstant` | RFC3339 UTC dạng `2026-10-18T03:00:00.000Z`, precision millisecond; Rust cấp timestamps, không nhận clock từ UI |
 | `Timezone` | Tên IANA hợp lệ, ví dụ `Asia/Ho_Chi_Minh`, fallback `UTC`; không nhận offset đơn lẻ thay timezone |
@@ -78,6 +81,16 @@ nhưng vẫn hợp lệ theo code points. Không log title hoặc nội dung bac
 | `TaskMutationDto` | `context: ContextDto`, `taskId: Id`, `changed: boolean` |
 | `SettingsDto` | `theme: "system" \| "light" \| "dark"`, `reportingTimezone: Timezone`, `timezoneFallback: boolean` |
 | `RecoveryBackupDto` | `path: string`, `completedAt: UtcInstant`; metadata công khai của backup đã hoàn tất, không chứng nhận restore thành công |
+
+**Giới hạn codec TAL-4:** Rust/TS DTO biểu diễn wire shape, không phải semantic
+validator/domain. `PageRequest` deserialize chưa enforce limit 1..200 hoặc
+`revision:null` chỉ khi offset 0; provider phải validate trước query và trả
+`VALIDATION_ERROR` với `field:page.limit`/`page.offset`. UUID hợp lệ, Gregorian
+Day/IANA timezone, trim/1–500 code points, Today/clock/revision/transaction cũng
+thuộc provider sau. Serialization/parity tests chỉ chứng minh giữ nguyên string,
+null, tags và required fields; không chứng minh các semantic đó đạt. Không thêm
+fake provider để kiểm semantic. TS brands không tự validate raw IPC ở runtime;
+adapter tương lai phải kiểm raw response/error trước dùng, không ép kiểu mù.
 
 Các DTO tên `ContextDto` dùng `revision: Revision`; cột rút gọn không làm field
 optional. `TaskDto` chỉ dành cho task chưa xóa; `completed` suy ra từ completion
@@ -168,7 +181,7 @@ Một revision bền vững **trong profile**, tăng sau mỗi transaction thay 
 (task/theme/restore). Revision không dùng timestamp, không quay về giá trị trong
 backup khi restore, không reset khi restart. Rust kiểm guard và commit thay đổi
 revision atomically, serialize writer trong process; query trả revision của cùng
-snapshot. Đây là yêu cầu kỹ thuật đề xuất, chưa chọn SQL/schema.
+snapshot. Đây là yêu cầu kỹ thuật đã duyệt, chưa chọn SQL/schema.
 
 Mục đích duy nhất: request cũ sau mất phản hồi không được thực thi lần nữa lên
 state mới. Không phải per-task version, lịch sử thao tác hoặc idempotency ledger.
@@ -338,7 +351,7 @@ với `BACKUP_FAILED`, dataset chưa thay. Chỉ công bố file đã finalize a
 không công bố temp/partial file. Nếu process chết giữa finalize và persist
 metadata, recovery query phải tìm được file hoàn tất trong thư mục backup do
 Rust quản lý; không dựa duy nhất vào response đã có thể mất. Chi tiết lưu metadata
-thuộc provider sau duyệt, không thay SQL/schema trong SPECIFY.
+thuộc ticket provider sau; TAL-4 không thay SQL/schema.
 
 `get_restore_recovery` trả thư mục backup công khai và metadata backup hoàn tất
 gần nhất (null nếu chưa có); UI cho user xem/copy vị trí, kể cả sau restart hoặc
@@ -361,9 +374,9 @@ lỗi không để file đích nửa chừng. Revision trả về là snapshot �
 nhất thiết revision hiện tại sau khi user đóng dialog. Backup trước restore dùng
 cùng định dạng đầy đủ, không chứa undo token/revision điều phối/shortcut OS.
 
-### Payload backup đề xuất cho fixture round trip
+### Payload backup cho provider round trip
 
-Đây là định dạng logic đề xuất, chưa chọn schema SQLite. JSON backup cố ý dùng
+Đây là định dạng logic đã duyệt cho provider sau; TAL-4 chưa triển khai backup codec hoặc chọn schema SQLite. JSON backup cố ý dùng
 `snake_case` theo field `format_version` của MVP, không tái dùng DTO view làm DB dump:
 
 - Root: `{format_version:1, metadata:{exported_at, app_version,
@@ -377,10 +390,10 @@ cùng định dạng đầy đủ, không chứa undo token/revision điều ph�
   hồi/task, ngày hoàn thành khớp instant/timezone của record. Không buộc snapshot
   title/ngày bằng task hiện tại; không buộc mọi completion timezone bằng timezone
   profile. Empty arrays hợp lệ; giữ revoked records khi round trip.
-- Đề xuất backup chỉ gồm setting portable theme; autostart/shortcut là OS state
+- Backup chỉ gồm setting portable theme; autostart/shortcut là OS state
   của máy hiện tại, không tự bật lại khi restore. Ranh giới portable settings đã được maintainer duyệt ngày 2026-10-18. Không thêm OS action bằng dữ liệu trong file.
 
-## 7. Ví dụ JSON và fixture giả dự kiến
+## 7. Ví dụ JSON và fixture giả
 
 Mốc clock cố định `2026-10-18T03:00:00.000Z`, reporting timezone
 `Asia/Ho_Chi_Minh`, Today `2026-10-18`. ID đều giả; ví dụ sau là một chuỗi liên tiếp,
@@ -499,7 +512,7 @@ Fixture phân trang: `{offset:100,limit:100,revision:null}` bị validation ở
 `page.offset`; `{offset:0,limit:100,revision:null}` lấy revision hiện tại, page
 kế tiếp phải gửi revision đó. Đây là ví dụ dự kiến, chưa chạy provider/test.
 
-TAL-4 sau duyệt cần fixture Rust/TS dùng chung bao phủ các shape request/response,
+TAL-4 có fixture Rust/TS dùng chung bao phủ các shape request/response,
 null Later, history taskDeleted, zero day, error, cancelled và preview ready;
 fixture không phải store giả thay backend. Dùng ID/clock trên, thêm title NFC/NFD,
 emoji 500/501 code points và sát nửa đêm/DST có timezone rõ.
@@ -508,18 +521,18 @@ emoji 500/501 code points và sát nửa đêm/DST có timezone rõ.
 
 | File/module | Owner và trách nhiệm |
 | --- | --- |
-| `docs/ipc-contract.md` | A, file duy nhất thay đổi ở bước SPECIFY này |
-| `src-tauri/src/dto.rs` (dự kiến TAL-4) | A, wire request/response/error; không SQL, không UI state |
-| `src/lib/api/types.ts`, `src/lib/api/fixtures.ts` (dự kiến TAL-4) | A, types và fixture giả parity Rust; không runtime fake success |
+| `docs/ipc-contract.md` | A, contract đã duyệt và boundary verification |
+| `src-tauri/src/dto/` (TAL-4) | A, wire request/response/error; không SQL, không UI state |
+| `src/lib/api/types.ts`, `src/lib/api/fixtures.ts`, `src/lib/api/contract-fixtures.json` (TAL-4) | A, types và fixture giả parity Rust; không runtime fake success |
 | `src-tauri/src/domain/`, `storage/`, `commands/` (ticket provider) | A, invariant/clock, SQLite/transaction, command adapters; chưa tạo thư mục rỗng |
 | `src/` components/state/style | B, hiển thị, draft/focus/loading/error, typed calls; không SQL hoặc tự tính Stats |
 | `src-tauri/src/desktop/` (dự kiến) | B, lifecycle/toggle/shortcut/autostart/native focus; không task domain |
 | `src-tauri/src/lib.rs`, `main.rs`, `capabilities/`, Tauri config | Shared, coordinator xếp lượt wiring; không A/B sửa đồng thời |
-| Manifests/lockfiles/CI, docs architecture khi được giao | A; B yêu cầu thay dependency qua coordinator; không sửa trong lượt SPECIFY |
+| Manifests/lockfiles/CI, docs architecture khi được giao | A; B yêu cầu thay dependency qua coordinator; TAL-4 chỉ thêm serde/serde_json exact pin và export module DTO |
 
 Rust rustfmt/snake_case, serde wire camelCase; TypeScript strict/camelCase,
-discriminated unions cho view/status. Snippet là minh họa style dự kiến, **chưa
-được compile/test**, không xác nhận dependency đã có:
+discriminated unions cho view/status. Snippet rút gọn minh họa naming; source DTO
+đầy đủ tại `src-tauri/src/dto/mod.rs` còn dùng required-null helper và tests:
 
 ```rust
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -549,15 +562,15 @@ plugin framework, generic command dispatcher hoặc abstraction dự phòng.
 
 ## 9. Commands thực tế và kiểm chứng
 
-Bước docs-only này chạy từ repo root:
+Checks repository chạy từ repo root:
 
 ```sh
 python3 scripts/check_repository.py
 git diff --check
 ```
 
-Các lệnh có thật trong manifests/CI dành cho triển khai sau, **không phải kết quả
-đã chạy cho Draft này**:
+Các lệnh có thật trong manifests/CI; kết quả triển khai TAL-4 được ghi tại
+[verification](specs/tal-4-verification.md), không suy ra provider đã chạy:
 
 ```sh
 pnpm check
@@ -573,7 +586,7 @@ pnpm tauri build --no-bundle -- --locked
 pnpm tauri dev
 ```
 
-Strategy sau khi được duyệt, không phải plan triển khai trong lượt này:
+Chiến lược kiểm chứng; phân biệt wire DTO TAL-4 với provider ticket sau:
 
 | Level | Bằng chứng cần có |
 | --- | --- |
@@ -593,23 +606,26 @@ p95/RSS/CPU chỉ được kết luận từ đo release cộng mọi process th
 
 **SPECIFY ready:** duy nhất file này mô tả đủ catalogue/DTO/error/refresh/retry,
 history/Undo/timezone/export/restore, phân biệt policy với proposal/provider,
-hai check docs pass và có handoff để maintainer review. Ready không phải approved.
+hai check docs pass và có handoff để maintainer review. Contract đã approved tại
+`674e689`; kết quả SPECIFY là checkpoint lịch sử.
 
 **Toàn TAL-4:** maintainer chốt contract; DTO Rust/TS và shared fixture có evidence
 serialization/typecheck/null/date/Unicode; adapter chỉ cho feature có provider;
 A/B review boundary và wiring, checks áp dụng pass, review/tích hợp xong mới đủ
-DoD. Chưa có các evidence đó trong bước này, không chuyển ticket Done.
+DoD. Evidence triển khai tại verification; B/coordinator review và tích hợp vẫn
+cần trước Done.
 
 **Luôn:** Rust giữ invariant/transaction, parameterized SQL khi có storage,
 plain text, capability tối thiểu, dev/test isolation, không log task, báo giới hạn
 thật; phối hợp shared files tuần tự.
 
-**Trình duyệt trước:** tên/shape/semantic kỹ thuật mới trong Draft này; thay scope,
+**Trình duyệt trước:** thay semantic đã duyệt; thay scope,
 network/license/stack, policy hoặc budget; quyết định mới về OS setting/backup.
-Không xin lại quyết định TAL-3 đã duyệt. Chỉ bắt đầu PLAN trong lượt sau khi spec
-được duyệt, không coi PR draft/CI xanh là duyệt.
+Không xin lại quyết định TAL-3 đã duyệt. Contract đã duyệt; maintainer cho phép
+triển khai sau plan mà không chờ gate
+plan/task riêng. Không coi PR draft/CI xanh thay thế code review/tích hợp.
 
-**Không làm:** SQL/schema/app/manifests/lockfiles/CI trong SPECIFY; tự rollover,
+**Không làm:** domain/DB/provider/desktop implementation trong TAL-4; tự rollover,
 xóa history khi delete, cloud/account/telemetry/AI, arbitrary frontend FS/shell,
 runtime fake provider, event sourcing/command bus, sub-agent, tự merge/publish
 hoặc chuyển Kaneo Done.
