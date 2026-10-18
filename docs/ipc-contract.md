@@ -1,6 +1,6 @@
 # TAL-4 — Rust ↔ Svelte IPC contract
 
-- **Draft — chưa approved**, ngày 2026-10-18; chỉ bước SPECIFY.
+- **Approved** ngày 2026-10-18 tại HEAD `674e689`; DTO/fixture triển khai trong TAL-4, provider chưa tồn tại.
 - Base: `59a809b54769bce335267f1528dde5d5e98b483d` (main có TAL-3).
 - Kaneo TAL-4: task `ylgxzhy84kvxo870xq4v2o28`, project
   `aolzusa4mtyjv1g1x7hzm46f`.
@@ -20,7 +20,7 @@ phiên; restore replace có preview/xác nhận/backup; import tối đa 20 MiB 
 100.000 task/completion record; theme system/light/dark. Budget mục 7 và các mục
 hoãn trong MVP giữ nguyên. Không xin duyệt lại các policy này.
 
-**Đề xuất TAL-4 cần review:** toàn bộ tên command, DTO, mã lỗi, thứ tự dữ liệu,
+**Contract kỹ thuật TAL-4 đã duyệt:** tên command, DTO, mã lỗi, thứ tự dữ liệu,
 revision, preview token và flow kỹ thuật bên dưới. Giả định app một instance,
 UI và Rust phát hành cùng artifact; không cần version negotiation IPC hoặc API
 bên ngoài. `format_version` của backup là version riêng, không phải version IPC.
@@ -28,16 +28,16 @@ bên ngoài. `format_version` của backup là version riêng, không phải ver
 Hiện `src-tauri/src/lib.rs` chỉ bootstrap/profile resolver, chưa đăng ký command
 nghiệp vụ; chưa có DB, Rust DTO, frontend IPC SDK hay adapter. Các command dưới
 đây là **contract đích, chưa có provider**, không phải lời hứa runtime chạy được.
-Lượt này chỉ sửa file này; không viết plan, code, fixture hoặc test.
+Maintainer cho phép lập plan rồi triển khai DTO/fixture ngay, bỏ gate duyệt plan/task riêng; không triển khai domain/DB/provider.
 
-Sau khi spec và plan được duyệt, phần TAL-4 dự kiến định nghĩa Rust/TS DTO và
+Theo contract đã duyệt và quyền triển khai sau plan, TAL-4 định nghĩa Rust/TS DTO và
 fixture giả dùng chung, kiểm serialization/typecheck/null/date/Unicode. Chỉ
 triển khai adapter cho provider thực sự có; feature thiếu provider phải disabled
 hoặc hiện unavailable trong app. Fixture chỉ dùng test/story/mockup có nhãn,
 không fallback runtime trả success. Domain/DB/file dialog/desktop triển khai ở
 các ticket có provider tương ứng; toàn TAL-4 còn cần review với B và tích hợp.
 
-## 2. Quy ước wire và kiểu dùng chung (đề xuất)
+## 2. Quy ước wire và kiểu dùng chung
 
 Một Tauri command nhận một argument `{ request: ... }`; query không tham số dùng
 `{ request: {} }`. Tên command Rust `snake_case`, JSON/TS `camelCase`.
@@ -83,7 +83,7 @@ Các DTO tên `ContextDto` dùng `revision: Revision`; cột rút gọn không l
 optional. `TaskDto` chỉ dành cho task chưa xóa; `completed` suy ra từ completion
 có hiệu lực, không phải boolean UI được phép ghi trực tiếp.
 
-## 3. Command/query catalogue (đề xuất, tất cả chưa có provider)
+## 3. Command/query catalogue (đã duyệt, tất cả chưa có provider)
 
 Bảng ghi body của `request`, không ghi lại lớp `{ request: ... }`. `guard` nghĩa
 field `expectedRevision` trực tiếp trong body. `page` là object `PageRequest`.
@@ -161,7 +161,7 @@ UI có thể xem khoảng khác bằng request tiếp, không thêm weekly/month
   tiêu thụ. Theme không thay Undo task; restore thành công xóa Undo. Restart mất
   Undo nhưng giữ dữ liệu. UI chỉ có quyền đọc action/token, không gửi inverse SQL.
 
-## 4. Revision, retry và lỗi (đề xuất tối thiểu)
+## 4. Revision, retry và lỗi
 
 Không có command bus, event sourcing, receipt table hoặc retry framework.
 Một revision bền vững **trong profile**, tăng sau mỗi transaction thay đổi dữ liệu
@@ -378,8 +378,7 @@ cùng định dạng đầy đủ, không chứa undo token/revision điều ph�
   title/ngày bằng task hiện tại; không buộc mọi completion timezone bằng timezone
   profile. Empty arrays hợp lệ; giữ revoked records khi round trip.
 - Đề xuất backup chỉ gồm setting portable theme; autostart/shortcut là OS state
-  của máy hiện tại, không tự bật lại khi restore. Cần maintainer chốt ranh giới này
-  vì MVP yêu cầu round trip settings. Không thêm OS action bằng dữ liệu trong file.
+  của máy hiện tại, không tự bật lại khi restore. Ranh giới portable settings đã được maintainer duyệt ngày 2026-10-18. Không thêm OS action bằng dữ liệu trong file.
 
 ## 7. Ví dụ JSON và fixture giả dự kiến
 
@@ -615,24 +614,24 @@ xóa history khi delete, cloud/account/telemetry/AI, arbitrary frontend FS/shell
 runtime fake provider, event sourcing/command bus, sub-agent, tự merge/publish
 hoặc chuyển Kaneo Done.
 
-## 11. Open questions và gate review
+## 11. Decisions đã duyệt và điểm còn mở
 
-Không phát hiện xung đột policy TAL-3 với contract đích. Các điểm sau là quyết định
-kỹ thuật mới; coordinator cần chuyển maintainer review trước PLAN/DTO freeze:
+Maintainer đã duyệt cả bốn đề xuất tại HEAD `674e689` ngày 2026-10-18:
 
-1. **Chặn contract freeze:** chấp thuận revision toàn profile + create ID ổn định
-   và reconcile sau unknown, không receipt/replay response? Ưu điểm ít cơ chế;
-   giới hạn xung đột toàn profile và không chứng minh nguyên intent đã commit.
-2. **Chặn contract freeze:** chấp thuận phân trang offset tối đa 200, sort cố định,
-   Stats inclusive tối đa 366 ngày và công thức mặc định 12 tháng ở mục 3?
-3. **Chặn data/settings boundary:** backup portable theme; autostart/shortcut giữ
-   ở máy hiện tại khi restore? MVP yêu cầu giữ settings nhưng chưa phân loại OS
-   state. B phải review nhóm desktop/settings/file dialog trước triển khai.
-4. **Chặn restore provider:** chấp thuận Rust native file dialog và một preview
-   snapshot token/10 phút, stale sau mọi mutation, backup format và public recovery
-   metadata/query ở mục 6? Token chỉ bảo đảm nội dung preview, metadata chỉ chỉ
-   ra backup đã tạo; không receipt ledger hoặc quyền filesystem tùy ý cho UI.
+1. Revision toàn profile + create ID ổn định + reconcile sau unknown; không receipt
+   ledger/replay response. Chấp nhận xung đột toàn profile và giới hạn chứng minh intent.
+2. Offset default 100/max 200, sort cố định; Stats inclusive max 366 ngày và công thức
+   mặc định 12 tháng tại mục 3.
+3. Backup portable theme + reporting timezone/history; autostart/shortcut là OS state
+   máy hiện tại, không thay khi restore.
+4. Rust native dialog; một preview snapshot token/10 phút, stale sau mutation;
+   backup format và public recovery metadata/query tại mục 6, gồm directory dự kiến
+   bắt buộc trước confirmation và actual completed backup path sau thao tác.
 
-Ngôn ngữ UI sản phẩm chưa chốt theo TAL-2; message tiếng Việt ở đây chỉ minh họa,
-không chặn DTO machine codes. Không hỏi lại timezone/Pending/Undo replace policy,
-import limits/theme/budget hoặc mở rộng các mục đã hoãn.
+Không mở lại các policy TAL-3. Maintainer đã bỏ gate duyệt PLAN/TASKS riêng và cho
+phép triển khai ngay sau lập plan; vẫn cần code review/tích hợp và evidence đầy đủ.
+
+**Còn mở cho ticket tương ứng:** chi tiết desktop provider/validation/partial OS
+failure cần B/coordinator review; reserved desktop errors không freeze provider.
+Ngôn ngữ UI sản phẩm chưa chốt theo TAL-2; message tiếng Việt chỉ minh họa, không
+chặn DTO machine codes. Không mở TAL-5/TAL-6 trong TAL-4.

@@ -173,7 +173,10 @@ Stats:
   Ghi nhận vị trí backup để user có thể chọn khôi phục, không âm thầm xóa backup.
 - Restore dùng transaction: malformed/unsupported/truncated file hoặc bất kỳ lỗi
   ghi nào giữ nguyên dataset trước đó; không chạy code/SQL có trong file.
-- Export → restore vào profile trống phải giữ đúng task, lịch sử, settings và Stats.
+- Export → restore vào profile trống phải giữ đúng task, lịch sử, portable settings
+  (theme), reporting timezone và Stats. Theo contract TAL-4 đã duyệt ngày
+  2026-10-18, autostart/shortcut là OS state của máy hiện tại, không bị thay
+  khi restore; không tự kích hoạt OS action từ backup.
 - Backup thủ công qua export và backup trước restore/migration thuộc MVP; lịch sao
   lưu tự động, retention policy và sync backup để sau.
 
