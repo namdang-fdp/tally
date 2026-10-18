@@ -3,6 +3,7 @@ node_modules/
 dist/
 .svelte-kit/
 target/
+src-tauri/gen/schemas/
 .pnpm-store/
 coverage/
 playwright-report/

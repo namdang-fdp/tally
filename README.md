@@ -6,9 +6,9 @@ Tally là ứng dụng todo desktop, local và offline: gọi một bảng nhỏ
 ghi hoặc hoàn thành việc, rồi quay lại công việc đang làm. Lịch sử và heatmap giúp
 bạn nhìn lại những gì đã hoàn thành.
 
-**Trạng thái:** đang thiết kế MVP. Repo hiện có tài liệu và công cụ kiểm tra repo;
-chưa có ứng dụng chạy được, bản cài đặt hay release. Stack đã chọn: **Tauri 2 +
-Svelte 5 + TypeScript + Vite**, logic Rust và SQLite local.
+**Trạng thái:** có scaffold Tauri với shell Tasks/Stats để chạy thử trên Linux.
+Chưa có nghiệp vụ quản lý task, persistence, bản cài đặt hay release. Stack:
+**Tauri 2 + Svelte 5 + TypeScript + Vite**; logic Rust và SQLite local là kiến trúc MVP.
 
 ## Trải nghiệm dự kiến
 
@@ -24,14 +24,25 @@ Svelte 5 + TypeScript + Vite**, logic Rust và SQLite local.
 [development guide](docs/development.md) để chuẩn bị máy,
 và [contribution guide](CONTRIBUTING.md) trước khi gửi thay đổi.
 
-Kiểm tra phần repo đã có bằng Python 3.11 trở lên:
+Sau khi cài dependencies Linux trong development guide, dùng Node theo
+`.node-version` và pnpm 10.34.7:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm tauri dev
+```
+
+Shell chỉ chuyển giữa Tasks/Stats, chưa tạo/lưu task. Dùng wrapper `pnpm tauri
+dev` để tách namespace dev khỏi release; không dùng `cargo run` trực tiếp.
+Các lệnh check/test/build/audit nằm trong [development guide](docs/development.md).
+Kết quả và giới hạn kiểm chứng tại [TAL-1 verification](docs/specs/tal-1-verification.md).
+
+Kiểm tra tài liệu bằng Python 3.11 trở lên:
 
 ```sh
 python3 scripts/check_repository.py
 git diff --check
 ```
-
-Các lệnh chạy/build app chỉ được công bố là hoạt động sau khi có scaffold.
 
 ## Tài liệu
 

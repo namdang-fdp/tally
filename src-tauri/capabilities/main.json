@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Shell window without frontend IPC permissions.",
+  "windows": ["main"],
+  "permissions": []
+}
