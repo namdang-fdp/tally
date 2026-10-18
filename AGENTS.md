@@ -13,12 +13,25 @@ nêu rõ và xử lý trước phần việc phụ thuộc. Không tự coi đ�
 
 - Ưu tiên yêu cầu cụ thể của người dùng. Thực hiện việc đã được cho phép, không
   hỏi lại các quyết định đã rõ.
-- Không commit, push, mở PR, merge hay publish nếu chưa được yêu cầu.
+- Maintainer đã cho phép coordinator và tối đa hai worker commit, push nhánh
+  công việc, mở/cập nhật PR cho TAL-3 và các ticket được giao trong kế hoạch MVP.
+  Không hỏi lại quyền này cho từng ticket trong phạm vi đã giao.
+- Merge PR, tạo tag/release và publish vẫn cần chỉ thị riêng của maintainer.
 - Không sửa/xóa thay đổi có sẵn của người dùng. Không dùng `git reset --hard` để dọn repo.
 - Dùng nhánh ngắn; `main` chỉ nhận thay đổi qua PR. Không tự bypass branch rules.
 - Nêu giả định quan trọng. Hỏi khi thay đổi sẽ phá dữ liệu, thay license, mở network
   mới hoặc mở rộng phạm vi sản phẩm ngoài yêu cầu đã thống nhất.
-- Không spawn sub-agent nếu người dùng chưa yêu cầu delegation/parallel agent work.
+- Maintainer đã cho phép điều phối tối đa hai worker bằng Orca trong Run Tally
+  hiện có. Reuse hai worktree cũ: kiểm tra thay đổi còn tồn, fetch origin/main,
+  tạo/switch nhánh mới từ main có prerequisite, đổi tên hiển thị theo ticket và
+  mở chat Codex mới để tách context ticket cũ. Không tạo worker trùng hoặc dùng
+  cơ chế sub-agent khác thay cho Orca orchestration.
+- Chọn `gpt-6-luna` hoặc `gpt-6.1-sol` theo độ phức tạp của task; kiểm tra model
+  thực tế sau khi khởi chạy. Muốn dùng Astra phải ping và được maintainer duyệt
+  trước; không tự chuyển model khi gặp khó.
+- Theo spec-driven development: có spec, plan, acceptance criteria và phương
+  pháp kiểm chứng trước khi code. Trình các quyết định mới hoặc điểm chưa rõ cho
+  maintainer; dùng tiếp các quyết định đã duyệt, không hỏi duyệt lại.
 
 ## Kiến trúc và chất lượng
 
@@ -44,6 +57,23 @@ nêu rõ và xử lý trước phần việc phụ thuộc. Không tự coi đ�
 - Đo tài nguyên trên bản release, cộng các process thuộc app; không dùng kích thước
   binary để suy ra RAM hoặc đo dev server rồi gọi là mức dùng bản phát hành.
 - Cập nhật spec/docs khi hành vi thay đổi. Báo rõ phần đã kiểm tra và giới hạn còn lại.
+
+## Definition of Done và điểm dừng điều phối
+
+- DoD (Definition of Done) của một ticket: acceptance criteria đạt với bằng
+  chứng phù hợp, check/test áp dụng pass, docs khớp hành vi và thay đổi đã được
+  review/tích hợp. `worker_done` chỉ kết thúc lượt thực thi; coordinator vẫn phải
+  kiểm tra evidence trước khi chuyển ticket sang Done hoặc mở prerequisite sau.
+- Kế hoạch MVP kết thúc ở TAL-25 khi AC-01–15 có bằng chứng đạt trên bản ghép
+  cuối, CI/build/audit đạt, artifact Linux đã smoke và maintainer dùng thử/nghiệm
+  thu. Budget phải đo trên release; ghi known limitations và license/notices.
+  Không đóng TAL-25 chỉ vì các ticket trước đã Done; không tự mở rộng backlog.
+- Tạm dừng phần phụ thuộc khi chờ duyệt spec/quyết định mới hoặc merge PR; báo
+  rõ cần maintainer quyết định gì. Khi user yêu cầu dừng, không giao thêm việc.
+- Trước khi kết thúc phiên điều phối, xử lý Delivery và settlement của mọi
+  Dispatch đang giám sát; worker đã settle phải reuse, release hoặc retain theo
+  yêu cầu user. Ghi coordinator-state/Kaneo để nối lại; không coi Run là bộ lập
+  lịch tự giữ model chạy nền sau khi chat kết thúc.
 
 ## Ngôn ngữ và style
 
