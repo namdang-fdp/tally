@@ -10,5 +10,8 @@ tính năng đã có. Release tương lai dùng version `MAJOR.MINOR.PATCH` và 
 - Concept, MVP spec và quyết định stack Tauri + Svelte.
 - License GPL-3.0-or-later, hướng dẫn contributor/agent và quy trình bảo vệ main.
 - Kiểm tra cấu trúc tài liệu và liên kết nội bộ trong CI.
+- Scaffold Tauri 2/Svelte 5 với điều hướng Tasks/Stats, profile dev riêng và test
+  frontend/Rust. Shell chưa quản lý hoặc lưu task.
+- Scripts và workflow kiểm tra frontend, Rust, dependency audit và Linux build.
 
-Chưa có ứng dụng hoặc bản phát hành để tải.
+Chưa có bản đóng gói hoặc bản phát hành để tải.

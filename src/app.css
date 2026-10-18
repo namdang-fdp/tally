@@ -1,0 +1,125 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+  --surface: #fafaf7;
+  --text: #242925;
+  --muted: #626a64;
+  --border: #dedfd9;
+  --accent: #2b5a46;
+  --hover: #eeefe9;
+  color: var(--text);
+  background: var(--surface);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1c211e;
+    --text: #eef0e9;
+    --muted: #a9b3ac;
+    --border: #38423b;
+    --accent: #a0d5b5;
+    --hover: #2a332d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 280px;
+}
+
+.shell {
+  padding: 1.5rem;
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.wordmark {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.06em;
+}
+
+.brand-dot {
+  color: var(--accent);
+}
+
+.preview-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+nav {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+button {
+  appearance: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 0.25rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--hover);
+}
+
+button[aria-current='page'] {
+  color: var(--accent);
+  border-bottom-color: currentColor;
+  font-weight: 650;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+main {
+  padding-block: 2rem 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.intro {
+  margin: 0.5rem 0 0;
+}
+
+.placeholder {
+  margin: 1.5rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}

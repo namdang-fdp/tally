@@ -1,6 +1,7 @@
 # Kiến trúc Tally
 
-Trạng thái: định hướng cho MVP, chưa có code. Stack được chốt tại
+Trạng thái: có shell Tauri/Svelte và profile isolation; logic task, desktop
+lifecycle và persistence dưới đây vẫn là định hướng MVP. Stack được chốt tại
 [ADR-0001](decisions/0001-desktop-stack.md); hành vi do [MVP spec](mvp-spec.md) quy định.
 
 ## Ranh giới

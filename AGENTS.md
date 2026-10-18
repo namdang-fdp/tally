@@ -35,11 +35,11 @@ nêu rõ và xử lý trước phần việc phụ thuộc. Không tự coi đ�
 
 ## Kiểm chứng và báo cáo
 
-- Hiện repo chỉ có tài liệu/công cụ: chạy `python3 scripts/check_repository.py`
-  và `git diff --check`.
-- Chưa có `package.json`/`src-tauri/Cargo.toml`; không tuyên bố đã build/test app.
-- Khi tạo scaffold, triển khai scripts và CI đã mô tả trong development guide
-  trong cùng PR. Sau đó dùng command thực tế từ manifest/CI.
+- Repo có scaffold shell Tasks/Stats, chưa có nghiệp vụ task/DB. Dùng command
+  thực tế trong manifest/CI và `docs/development.md`; chạy thêm
+  `python3 scripts/check_repository.py` và `git diff --check`.
+- Scripts check/lint/test/build, Rust fmt/clippy/test, audit và Linux build phải
+  chạy thật. Không coi check tài liệu là bằng chứng app build/chạy được.
 - Kiểm tra UI trong app thật; ảnh browser không chứng minh shortcut/focus/IME desktop hoạt động.
 - Đo tài nguyên trên bản release, cộng các process thuộc app; không dùng kích thước
   binary để suy ra RAM hoặc đo dev server rồi gọi là mức dùng bản phát hành.

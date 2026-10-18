@@ -43,9 +43,9 @@ Không trộn format diện rộng với thay đổi hành vi.
   nếu standard library hoặc stack hiện có đã giải quyết được vấn đề.
 - Maintainer kiểm tra correctness, cấu trúc, an toàn dữ liệu, UI và tài nguyên trước merge.
 
-Repo hiện chưa có app; CI ban đầu chỉ kiểm tra tài liệu và cấu hình. PR tạo
-scaffold phải bổ sung check frontend/Rust/build thực sự, không coi check repo là
-bằng chứng app chạy được.
+Repo có scaffold shell, chưa có nghiệp vụ task/DB. CI định nghĩa check
+frontend/Rust/build/audit thực sự; không coi check repo là bằng chứng app chạy
+được. Phân biệt kết quả command local với workflow remote đã chạy.
 
 ## AI-assisted contributions
 

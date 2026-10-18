@@ -2,8 +2,10 @@
 
 ## Trạng thái và môi trường tham chiếu
 
-Repo chưa có scaffold app. Các lệnh trong mục **Hiện chạy được** là công cụ đã có;
-các lệnh app ở mục riêng là hợp đồng cho PR scaffold, chưa chạy được hôm nay.
+Repo có scaffold Tauri/Svelte, shell Tasks/Stats và profile isolation. Chưa có
+nghiệp vụ task, DB hoặc desktop lifecycle MVP. Commands dưới đây có script thật;
+kết quả local và phần chưa kiểm chứng nằm tại
+[TAL-1 verification](specs/tal-1-verification.md).
 
 Máy tham chiếu: CachyOS x86_64, Hyprland/Wayland, Core Ultra 7 255H, khoảng 15 GiB
 RAM. Audit/setup ngày 18/10/2026: Rust/Cargo 1.98.1 (package hệ điều hành),
@@ -28,9 +30,17 @@ Rust hệ thống hiện đủ dùng. Rustup là lựa chọn quản lý toolcha
 không gỡ/thay Rust hệ thống trong script setup. Nếu chuyển sang rustup, ghi quyết
 định và pin toolchain cùng CI trong một PR riêng.
 
-Node được ghi trong `.node-version`. Khi scaffold, pin `packageManager` thành
-`pnpm@10.34.7` và commit `pnpm-lock.yaml`, `src-tauri/Cargo.lock`. Tauri CLI là dev
-dependency của project, không yêu cầu cài global. Svelte dùng Vite, chưa cần SvelteKit.
+Node được pin trong `.node-version`, `packageManager` là `pnpm@10.34.7`; giữ
+`pnpm-lock.yaml` và `src-tauri/Cargo.lock` trong version control. Tauri CLI là dev
+dependency của project, không yêu cầu cài global. Svelte dùng Vite, không SvelteKit.
+
+Các dependency trực tiếp pin exact version. Svelte 5.57.2, Vite 8.3.4,
+TypeScript 5.9.3 và CLI Tauri 2.12.3; Rust dùng tauri 2.12.4/tauri-build 2.7.3.
+Vitest/Testing Library/jsdom kiểm tra UI; ESLint/Prettier kiểm tra source/config;
+tempfile chỉ là dev dependency cho Rust test. Dependency trực tiếp có license
+MIT hoặc Apache-2.0 (đã đối chiếu metadata); thông báo license khi release vẫn
+theo maintaining guide. Chưa thêm SQLite crate hoặc frontend Tauri SDK vì shell
+chưa cần persistence/IPC nghiệp vụ.
 
 macOS/Windows là hướng phát triển, chưa phải nền tảng đã kiểm chứng hay được hỗ trợ
 trong MVP. Không quảng bá hỗ trợ trước khi có build và smoke test trên hệ điều hành đó.
@@ -48,9 +58,11 @@ Check repo phát hiện file bắt buộc bị thiếu/rỗng, JSON ruleset khô
 liên kết file Markdown bị hỏng. Không kiểm tra anchor, URL ngoài hay thay thế
 Markdown lint, YAML validation, unit test hoặc build app.
 
-## Hợp đồng cho PR scaffold, chưa chạy được
+## Chạy và kiểm tra scaffold
 
-PR scaffold phải tạo các script tương ứng, lockfile và CI chạy command thật:
+Chạy từ repo root. Chỉ `pnpm tauri dev` mở app; `pnpm dev` chỉ mở Vite server
+loopback. Giới hạn Cargo jobs khi máy thiếu RAM, ví dụ đặt `CARGO_BUILD_JOBS=4`
+trước command build/test; đây không phải benchmark tài nguyên app.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -63,35 +75,90 @@ cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml --locked
 pnpm audit --audit-level high
+cargo audit --file src-tauri/Cargo.lock
 pnpm tauri build --no-bundle
+./src-tauri/target/release/tally
 ```
 
-`pnpm check` phải chạy Svelte/TypeScript checking; `pnpm lint` phải chạy linter và
-format check; `pnpm test --run` dùng Vitest ở chế độ kết thúc, không watch.
-CI bổ sung Rust dependency audit với công cụ được pin version; vulnerability có
-thể khai thác phải được xử lý trước merge/release, ngoại lệ phải có lý do và hạn xử lý.
-Không tạo script rỗng hoặc script luôn exit 0 để thỏa tên command.
+`pnpm check` chạy svelte-check và TypeScript strict; `pnpm lint` chạy ESLint và
+Prettier check cho source/config. Tài liệu giữ format hiện có, được check link
+bằng Python. `pnpm format` sửa format source/config; Rust dùng `cargo fmt`.
+`pnpm test --run` dùng Vitest ở chế độ kết thúc, không watch. Test tập trung:
+
+```sh
+pnpm test --run src/App.test.ts
+pnpm test --run scripts/tauri.test.ts
+cargo test --manifest-path src-tauri/Cargo.toml --locked profiles
+```
+
+Cài Rust audit tool bản pin nếu chưa có (thay đổi cài tool local, không đổi Rust):
+
+```sh
+cargo install cargo-audit --version 0.22.2 --locked
+```
+
+Audit cần registry/advisory network ở môi trường phát triển, không phải runtime
+app. Không ignore lỗi mạng như pass. Vulnerability có thể khai thác phải được xử
+lý trước merge/release; ngoại lệ cần lý do và hạn xử lý được maintainer duyệt.
+Hai cảnh báo informational upstream hiện có được ghi riêng trong verification;
+không cấu hình ignore hay nới threshold để giấu chúng.
+
+## Profile dữ liệu
+
+`pnpm tauri dev` gọi wrapper `scripts/tauri.mjs`, tự ghép `tauri.dev.conf.json`
+để identifier là `io.github.namdang-fdp.tally.dev`, kể cả thêm `--release`.
+Build mặc định dùng `io.github.namdang-fdp.tally`. WebView cache/data cũng tách
+theo identifier. Không gọi `cargo run` hoặc `pnpm exec tauri dev` trực tiếp vì
+chúng bỏ qua config dev của wrapper.
+
+Rust startup phân giải OS data root và namespace, giữ PathBuf trong app state
+cho storage về sau; chưa tạo DB hoặc thư mục persistence riêng. Root không xác
+định/không tuyệt đối hay identifier ngoài danh sách cho phép làm startup thất
+bại, không fallback vào release. Thay identifier phải cập nhật resolver và test.
+Rust tests truyền root TempDir, không tự đọc OS app data.
+
+Smoke có thể đặt `XDG_DATA_HOME`, `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` vào thư mục
+tạm riêng trên Linux. Không dùng data release thật làm fixture. Chưa có profile
+switcher hoặc tùy chọn chọn đường dẫn trong UI.
+
+## CI
+
+Workflow `CI` trên Ubuntu 24.04 định nghĩa các job `repository`, `frontend`,
+`rust`, `audit`, `linux-build`. Native build chờ frontend/Rust/audit đạt, chạy
+`pnpm tauri build --no-bundle -- --locked`. Không upload/publish bản phát hành.
+Node/pnpm khớp pin local; Rust CI dùng official 1.98.0 với rustfmt/clippy, local
+là Rust 1.98.1 từ distro. Chưa đổi Rust hệ thống hoặc thêm rust-toolchain file.
+
+Workflow giữ read-only permissions, action SHA, timeout và concurrency;
+Dependabot theo dõi Actions/npm/Cargo. Cú pháp đã kiểm tra bằng actionlint 1.7.7
+local, không phải bằng chứng GitHub Actions đã chạy. Sau lần chạy remote đầu,
+maintainer mới cập nhật required checks theo [maintaining](maintaining.md).
 
 Đóng gói bản Linux và chạy thử artifact thật trước release. Build frontend và
 `--no-bundle` không chứng minh AppImage/package có thể cài và chạy.
 
-## Cấu trúc app dự kiến
+## Cấu trúc hiện tại
 
 ```text
-src/                         Svelte UI, typed command clients và UI tests
-src-tauri/src/               Rust domain, commands và storage
-src-tauri/migrations/        SQLite migrations có version
-src-tauri/tests/             Integration tests với DB/thư mục tạm
+src/                        Svelte shell, style và UI navigation tests
+src-tauri/src/              Bootstrap, profile resolver và Rust unit tests
+src-tauri/capabilities/      Capabilities shell (chưa có quyền frontend IPC)
+src-tauri/icons/             Icon scaffold tự tạo, không sao chép asset bên ngoài
 docs/                       Spec, quyết định và hướng dẫn
 scripts/                    Công cụ kiểm chứng của repo
 .github/                    CI, issue/PR templates, ownership và branch rules
 ```
 
-Đây là cấu trúc đề xuất cho scaffold; các thư mục app chưa tồn tại.
+Domain/commands/storage, migrations và integration tests DB sẽ được thêm theo
+ticket nghiệp vụ; chưa tạo thư mục rỗng cho chúng.
+Test CLI wrapper nằm trong `scripts/tauri.test.ts`, chạy Node subprocess với
+provider pnpm giả trong thư mục tạm để kiểm tra argument boundary và exit code.
 
 ## Cách kiểm chứng hành vi
 
-- Rust unit/integration tests kiểm tra task lifecycle, undo, lịch sử, transaction,
+- Hiện tại: Rust test profile/root isolation; UI test navigation chuột/bàn phím;
+  smoke Tauri thật. Phần nghiệp vụ dưới đây là yêu cầu cho ticket tiếp theo.
+- Rust unit/integration tests sẽ kiểm tra task lifecycle, undo, lịch sử, transaction,
   thống kê theo ngày, import và migration.
 - UI tests kiểm tra nhập liệu, focus, thao tác bằng keyboard và trạng thái lỗi.
 - Smoke test trong app Tauri thật kiểm tra shortcut, focus sau khi mở/ẩn, Esc,

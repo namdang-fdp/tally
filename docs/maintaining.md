@@ -45,10 +45,12 @@ với main, rồi export/cập nhật JSON để khớp cấu hình remote.
 chưa cưỡng chế check CI ở server. Trước đó maintainer vẫn phải chạy check local
 và xem CI trên PR trước merge.
 
-CI hiện chỉ kiểm tra tài liệu/liên kết file/cấu hình repo và whitespace. Nó không
-build app. PR scaffold phải thêm frontend checks, Rust fmt/clippy/test, dependency
-audit và Linux build trước khi nhận code ứng dụng. Thêm job ứng dụng vào required
-checks sau lần chạy đầu, không dùng job skip hay script giả thay cho kiểm chứng.
+Scaffold TAL-1 bổ sung workflow với `frontend`, `rust`, `audit`, `linux-build`
+bên cạnh `repository`: frontend check/lint/test/build, Rust fmt/clippy/test,
+dependency audit và Linux native build. Các mốc bootstrap phía trên là bối cảnh
+lịch sử; phải kiểm tra lại remote thay vì suy rằng local workflow đã chạy trên
+GitHub. Thêm job ứng dụng vào required checks sau lần chạy đầu; không dùng job
+skip hay script giả thay cho kiểm chứng. TAL-1 không tự sửa branch rules.
 
 Khi có maintainer thứ hai có thể review, nâng số approval lên 1 và cân nhắc code
 owner approval. Không cấu hình một gate không ai có thể hoàn thành.
@@ -58,7 +60,7 @@ owner approval. Không cấu hình một gate không ai có thể hoàn thành.
 - Workflow dùng quyền read tối thiểu, action pin theo commit SHA, timeout và concurrency.
 - Không dùng `pull_request_target` để chạy code của contributor, không cấp secrets
   cho PR fork và không chèn trực tiếp title/body issue vào shell command.
-- Dependabot hiện theo dõi GitHub Actions. Thêm npm/Cargo khi có manifest thật.
+- Dependabot theo dõi GitHub Actions, npm và Cargo theo manifest thật.
 - Không phát hành tự động chỉ vì push main; release cần maintainer chủ động yêu cầu.
 
 ## License và nguồn bên thứ ba
