@@ -304,11 +304,16 @@ xem vị trí, không là capability tùy ý mở/ghi file qua frontend.
 completion, không chỉ active. UI cảnh báo replace, hiện counts/timezone và yêu cầu
 xác nhận rõ trước `confirmed:true`; không tự xác nhận khi mở preview.
 
-Không yêu cầu UI hiện một file backup đã tồn tại trước confirmation: backup chỉ
-được tạo sau xác nhận. Nếu UI hiển thị thư mục/vị trí dự kiến, phải ghi “dự kiến,
-chưa tạo”; đó không phải `RecoveryBackupDto` và không bảo đảm ghi file sẽ thành
-công. AC-11 được chứng minh bằng vị trí backup thực sự đã hoàn tất, kể cả khi
-restore sau đó thất bại; không suy ra có backup chỉ từ preview ready.
+Sau preview ready, UI bắt buộc gọi `get_restore_recovery` lấy `backupDirectory`
+trước khi mở confirmation. Confirmation luôn hiển thị thư mục này với nhãn
+“Thư mục backup dự kiến — chưa tạo file”, cùng cảnh báo replace/counts/timezone.
+Query lỗi thì chặn confirmation/confirm, hiện lỗi và cho retry query; chỉ mở
+confirmation sau query thành công. Không cần có `latestBackup` để xác nhận.
+Backup mới chỉ được tạo sau xác nhận; directory dự kiến không phải
+`RecoveryBackupDto` và không bảo đảm ghi file sẽ thành công. Sau restore, UI dùng
+actual completed backup path như contract success/error/recovery bên dưới.
+AC-11 được chứng minh bằng vị trí backup thực sự đã hoàn tất, kể cả khi restore
+sau đó thất bại; không suy ra có backup chỉ từ preview ready hoặc directory.
 
 Token cần thiết để restore đúng nội dung đã preview, không mở lại path có thể đã
 bị đổi file. Rust giữ một snapshot bytes/parsed data đã validate, tối đa một token
@@ -579,6 +584,7 @@ Strategy sau khi được duyệt, không phải plan triển khai trong lượt
 | Provider query boundary | Revision null chỉ nhận offset 0; null + offset > 0 validation, page tiếp dùng revision cụ thể, thay dữ liệu giữa page conflict; không trộn snapshot |
 | Data provider | Round trip task/deleted/revoked/settings/Stats; invalid version/ID/reference/limit/truncated; file đổi sau preview, stale/expired token. Backup/metadata lỗi chặn replace; rollback xác nhận trả notApplied + backup path nếu đã tạo; crash sau finalize/trước metadata, mất response và restart vẫn tìm được backup hoàn tất; metadata không chứng nhận restore thành công |
 | UI Vitest/Testing Library | Loading/empty/stale/error, draft/IME handler, invalidate/refresh/generation; provider missing trước invoke → notApplied, transport/deserialize sau invoke mutation → unknown, query → notApplicable; unknown giữ draft/chặn ghi/refresh + recovery query cho restore, không tự replay; phân biệt vị trí dự kiến/backup đã tạo; Undo không chiếm text Ctrl+Z |
+| UI restore confirmation | Preview ready → gọi recovery query trước mở confirmation; thành công luôn hiện backupDirectory với nhãn dự kiến/chưa tạo file, kể cả latestBackup null; query lỗi chặn confirm và cho retry; không gọi restore trước xác nhận; sau restore hiện actual completed path từ success/error/recovery |
 | App thật | Tauri file dialog/focus/shortcut/IME/restore/restart trên Hyprland, provider integration và release budget mục 7; browser/fixture không chứng minh các AC desktop |
 
 Không đặt coverage % mới, không coi check link là test DTO hoặc app build. Budget
