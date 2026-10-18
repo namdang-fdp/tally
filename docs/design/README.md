@@ -5,9 +5,11 @@ v02 ngày 2026-10-18, theo xác nhận từ coordinator. Chỉ dẫn bàn giao m
 commit/push nhánh và mở **draft PR**, thay yêu cầu cũ “không commit”. Backlog do
 Kaneo TAL-2 quản lý; plan dưới đây nằm trong ownership của ticket.
 
-**Chờ TAL-1 merge trước khi merge TAL-2.** Coordinator sẽ yêu cầu cập nhật main,
-chạy lại CI và chuyển ready sau đó. Không tự merge/publish hoặc làm task tiếp
-theo. TAL-2 giữ **In Review**, không tự Done trước tích hợp. Chấp thuận visual
+**TAL-1 PR #3 đã merge** ngày 2026-10-18, commit
+`34ff7bcb8bd4e9fbce740a5c97a3c7fa91b99afb`. Coordinator đã cho phép cập nhật main,
+chạy lại suite/CI và chuyển [PR #4](https://github.com/namdang-fdp/tally/pull/4)
+sang Ready khi checks tại HEAD mới đạt. Không tự merge/bật auto-merge/publish hoặc
+làm task tiếp theo. TAL-2 giữ **In Review**, không tự Done trước tích hợp. Chấp thuận visual
 không duyệt timezone, Pending, Undo, restore, giới hạn import hoặc budget MVP;
 các policy này vẫn thuộc **TAL-3**.
 
@@ -142,7 +144,42 @@ trong bộ nhớ, test thất bại như mong đợi, không thay source repo.
 Đã chạy lại `check-interactions.py` trong browser Orca: lỗi ghi/retry/Undo,
 add-completed từ ngày cũ, restore có xác nhận/xóa Undo, focus action,
 synthetic composition và glass/solid đều pass. Vẫn là DOM activation; không nâng
-kết luận thành kiểm chứng bàn phím/IME/Wayland thực. Không build/test app Tauri.
+kết luận thành kiểm chứng bàn phím/IME/Wayland thực. Ở lượt bàn giao draft đầu,
+chưa build/test scaffold Tauri; xem cập nhật sau TAL-1 bên dưới.
+
+### Kiểm chứng sau khi cập nhật main TAL-1
+
+Base: `34ff7bcb8bd4e9fbce740a5c97a3c7fa91b99afb`. Working tree sạch trước fetch;
+remote TAL-2 vẫn là commit bàn giao `157f6ab68fd09978b0571006ab91ea65cd2fd152`,
+không có commit lạ. Rebase nhánh cá nhân lên `origin/main`, không sửa main hoặc
+worktree khác. Push dùng lease khóa đúng SHA remote cũ, không force main.
+
+| Command/check local trên base mới | Kết quả |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | PASS, lockfile không đổi |
+| `pnpm check` | PASS, không có lỗi/cảnh báo Svelte |
+| `pnpm lint` | PASS; giữ nguyên ESLint/Prettier và `.prettierignore` của main, `docs/` được bỏ qua theo cấu hình có sẵn |
+| `pnpm test --run` | PASS, 7 test / 2 file |
+| `pnpm build` | PASS, frontend scaffold |
+| `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check` | PASS |
+| `CARGO_BUILD_JOBS=4 cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings` | PASS |
+| `CARGO_BUILD_JOBS=4 cargo test --manifest-path src-tauri/Cargo.toml --locked` | PASS, 5 test Rust |
+| `pnpm audit --audit-level high` | PASS, không có vulnerability được báo |
+| `/tmp/tally-tools/bin/cargo-audit audit --file src-tauri/Cargo.lock` | Exit 0, tool 0.22.2; giữ hai cảnh báo upstream như TAL-1 |
+| `CARGO_BUILD_JOBS=4 pnpm tauri build --no-bundle -- --locked` | PASS, release scaffold build 1m42s; không chạy app hoặc đóng gói |
+| `python3 scripts/check_repository.py`, `git diff --check` | PASS; link/metadata/whitespace; diff với main chỉ bốn file TAL-2 |
+| Mockup JS/HTML | PASS, command Node ở dưới, 30 ID tĩnh duy nhất, label/ARIA references và không resource ngoài |
+| Browser mockup chạy lại | PASS, 34 tổ hợp scenario/theme, 24 responsive iframe cases và interaction checks bằng DOM activation |
+
+Rust local là 1.98.1; CI pin 1.98.0 theo main. Hai cảnh báo audit có sẵn là
+`RUSTSEC-2024-0370` (`proc-macro-error`, unmaintained) và `RUSTSEC-2024-0429`
+(`glib`, unsound); không thêm ignore hoặc nới threshold, xem
+[TAL-1 verification](../specs/tal-1-verification.md). Build scaffold không phải
+nghiệm thu native window blur, task/DB, IME/Wayland hay ngân sách tài nguyên TAL-2.
+
+CI được đối chiếu với HEAD sau push, không dùng lượt xanh của draft cũ. SHA HEAD,
+run URL và kết quả GitHub được ghi trong body [PR #4](https://github.com/namdang-fdp/tally/pull/4).
+Chỉ chuyển Ready khi checks cần thiết của HEAD mới xanh; không tự merge hay Done.
 
 ### Chạy lại kiểm tra fixture, không cần dependency
 
@@ -225,6 +262,6 @@ JS
 8. Bật reduced motion của OS/browser, kiểm tra không còn transition không cần
    thiết. Đo computed contrast và kiểm tra accessible names trong browser.
 
-Checkpoint hiện tại: **visual v02 đã được chấp thuận; chuẩn bị draft PR, chờ
-TAL-1 trước tích hợp**. Bàn phím/pointer/IME trực tiếp và desktop smoke vẫn còn
+Checkpoint hiện tại: **visual v02 đã được chấp thuận; PR #4 được cập nhật sau
+TAL-1, chỉ chuyển Ready khi checks của HEAD mới đạt**. Bàn phím/pointer/IME trực tiếp và desktop smoke vẫn còn
 mở. Không đổi trạng thái Kaneo hoặc tự đánh TAL-2 Done; policy vẫn chờ TAL-3.

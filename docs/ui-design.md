@@ -2,8 +2,9 @@
 
 - Trạng thái: Spec và visual mockup v02 đã được người dùng chấp thuận ngày
   2026-10-18, theo xác nhận bàn giao từ coordinator. Policy MVP vẫn chờ TAL-3.
-- Bàn giao: được phép commit/push `feature/tal-2-widget` và mở draft PR về `main`;
-  chờ TAL-1 merge trước khi coordinator yêu cầu cập nhật base/CI/chuyển ready.
+- Bàn giao: [PR #4](https://github.com/namdang-fdp/tally/pull/4). TAL-1 #3 đã merge;
+  coordinator cho phép rebase trên main, chạy lại checks và chuyển Ready khi đạt.
+- Base cập nhật: `34ff7bcb8bd4e9fbce740a5c97a3c7fa91b99afb` ngày 2026-10-18.
 - Ngày: 2026-10-18.
 - Nhánh: `feature/tal-2-widget`.
 - Kaneo: TAL-2, `[B] Thiết kế widget Tasks/Stats và mockup light/dark`, task ID
@@ -186,7 +187,10 @@ python3 -m http.server 4173 --bind 127.0.0.1 --directory docs/design
 ```
 
 Địa chỉ kiểm tra: `http://127.0.0.1:4173/widget.html`. Không mở listener public.
-Chưa có manifest app; không tuyên bố chạy được command build/test app trong TAL-2.
+Sau TAL-1, repo đã có manifest và scaffold Tauri/Svelte. Suite thực tế trong
+[development guide](development.md) được chạy khi ghép TAL-2 với main; kết quả
+tại README mockup. Build/test scaffold không chứng minh logic task/DB hay native
+window blur của mockup đã được triển khai.
 
 Dùng semantic HTML, CSS class kebab-case, JavaScript camelCase; tên accessible
 cụ thể. Ví dụ style mong muốn cho control (không phải code app đã triển khai):
@@ -221,8 +225,8 @@ file ownership, ghi nơi xem trong README. Không coi checklist dự kiến là 
 | UI-08 | `python3 scripts/check_repository.py` và `git diff --check` thành công; diff chỉ thuộc bốn file ownership |
 
 Test DOM cho composition chỉ kiểm tra handler; nhập tiếng Việt bằng bộ gõ thật
-trong desktop Tauri thuộc ticket sau. Không benchmark tài nguyên, không tuyên bố
-đã build, test hoặc hoàn thành nghiệm thu sản phẩm.
+trong desktop Tauri thuộc ticket sau. Không benchmark tài nguyên hoặc tuyên bố
+hoàn thành nghiệm thu sản phẩm từ kết quả scaffold/mockup.
 
 ## 8. Boundaries
 
@@ -241,7 +245,9 @@ duyệt chỉ vì mockup chạy. Trạng thái review/tích hợp cần đúng b
 
 Người dùng đã duyệt spec, sau đó chấp thuận visual mockup v02. Chỉ dẫn bàn giao
 mới từ coordinator thay yêu cầu cũ “không commit”: cho phép commit/push nhánh này
-và mở draft PR về `main`, không merge/publish hoặc làm task tiếp theo.
+và cập nhật PR #4 về `main`. TAL-1 #3 đã merge; được phép cập nhật main và chuyển
+Ready sau khi checks của HEAD mới đạt. Không merge/bật auto-merge/publish hoặc
+làm task tiếp theo.
 Plan, mockup và nhật ký kiểm chứng hiện nằm trong `docs/design/`; v02 đã mở và
 kiểm tra trong browser Orca; giới hạn desktop vẫn giữ nguyên. Xem README để mở
 mockup và chạy lại các kiểm tra fixture. Visual review không thay nghiệm thu app
