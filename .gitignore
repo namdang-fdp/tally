@@ -1,0 +1,36 @@
+# Build and tool caches
+node_modules/
+dist/
+.svelte-kit/
+target/
+.pnpm-store/
+coverage/
+playwright-report/
+test-results/
+__pycache__/
+*.pyc
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Personal data, exports and logs
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.log
+local-data/
+backups/
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
