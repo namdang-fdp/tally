@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Báo lỗ hổng riêng tư
+    url: https://github.com/namdang-fdp/tally/security/advisories/new
+    about: Không công bố chi tiết lỗ hổng hoặc dữ liệu thật trong public issue.

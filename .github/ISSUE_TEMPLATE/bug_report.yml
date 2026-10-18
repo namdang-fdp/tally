@@ -1,0 +1,31 @@
+name: Bug report
+description: Báo lỗi có bước tái hiện và môi trường cụ thể.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: Không đưa task/database/token thật vào issue. Lỗ hổng bảo mật dùng Security policy.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Các bước tái hiện
+      description: Dùng dữ liệu giả; nêu tần suất lỗi.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Mong đợi và thực tế
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Môi trường
+      description: Phiên bản/commit Tally, OS, X11/Wayland/compositor, kiến trúc và cách cài.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Log hoặc ảnh đã loại dữ liệu riêng tư

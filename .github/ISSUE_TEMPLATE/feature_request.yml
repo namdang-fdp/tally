@@ -1,0 +1,22 @@
+name: Feature request
+description: Thảo luận vấn đề và phạm vi trước khi triển khai.
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vấn đề cần giải quyết
+      description: Ai gặp vấn đề, trong tình huống nào? Đã có cách xử lý khác chưa?
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Hành vi đề xuất và cách biết đã làm xong
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Phạm vi và trade-off
+      description: Liên quan MVP nào? Ảnh hưởng UI, tài nguyên, dữ liệu và bảo mật ra sao?

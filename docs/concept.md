@@ -4,6 +4,9 @@
 
 Ngày khởi tạo ý tưởng: 18/10/2026. Đây là bản định hướng ban đầu, chưa phải đặc tả triển khai.
 
+Stack đã chốt: **Tauri 2 + Svelte 5 + TypeScript + Vite**, logic Rust và SQLite local.
+License: **GPL-3.0-or-later**. Hành vi và phạm vi bản đầu được mô tả tại [MVP spec](mvp-spec.md).
+
 ## Vì sao làm?
 
 Ý tưởng bắt đầu từ việc dùng todo của Look: giao diện nhỏ, thao tác nhanh, có heatmap và thống kê tạo động lực. Mình muốn giữ cảm giác đó trong một app riêng, tự quyết định những gì thực sự cần.
@@ -51,15 +54,14 @@ Thống kê để nhìn thấy tiến bộ và muốn quay lại dùng. Không b
 
 ## Phạm vi đề xuất cho bản đầu
 
-Todo hôm nay và việc để sau; thêm/sửa/xóa/hoàn thành/hoàn tác; phím tắt; lịch sử và Stats; lưu dữ liệu và xuất/nhập.
+Todo hôm nay, ngày cũ và việc để sau; thêm/sửa/xóa/hoàn thành/hoàn tác; phím tắt; lịch sử, heatmap và thống kê cơ bản; lưu dữ liệu và xuất/nhập. Xu hướng tuần/tháng, streak và CLI thêm task để sau MVP; lệnh mở/ẩn bảng thuộc MVP.
 
 Ưu tiên dùng tốt trên Linux của tác giả, với hướng đi desktop đa nền tảng. Chưa chốt thứ tự hỗ trợ Windows/macOS. Mobile, cloud sync, cộng tác nhóm, AI, calendar, Kanban và Pomodoro để ngoài bản đầu nhằm giữ phạm vi nhỏ.
 
 ## Những gì còn mở
 
 - Phác thảo hai tab Tasks / Stats và luồng thao tác bàn phím.
-- Chốt múi giờ của thống kê và cách hiển thị, chuyển việc chưa xong từ các ngày trước.
-- Chọn công nghệ sau khi cân nhắc tích hợp desktop, tài nguyên và khả năng bảo trì.
-- Chọn giấy phép mã nguồn mở trước khi công bố.
+- Review các mặc định đề xuất về múi giờ, việc ngày cũ và tài nguyên trong MVP spec trước khi triển khai.
+- Kiểm chứng shortcut/focus và mức dùng tài nguyên của Tauri trên Hyprland/Wayland.
 
 Thành công ban đầu: tác giả muốn dùng Tally mỗi ngày, dữ liệu đáng tin cậy, và bạn bè có thể cài dùng mà không cần hướng dẫn dài.
